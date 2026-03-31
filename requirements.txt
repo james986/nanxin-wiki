@@ -1,0 +1,9 @@
+mkdocs-material==9.7.1
+mkdocs-glightbox
+mkdocs-include-markdown-plugin
+mkdocs-macros-plugin
+pymdown-extensions
+mkdocs-minify-plugin
+mkdocs-git-revision-date-localized-plugin
+mkdocs-redirects
+jieba

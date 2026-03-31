@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fashionstar Controller V21 (iOS Fix)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* ============================
+           核心 CSS 样式 (保持视觉一致)
+           ============================ */
+        :root {
+            --btn-size: 16vmin; 
+            --icon-size: 8vmin;
+            --color-bg: #00051a; 
+            --color-glow: #00eaff;
+            --color-border: #008cb3;
+            --color-text: #ffffff;
+            --font-sci: 'Orbitron', sans-serif;
+            --dpad-bg: #0b1a26;
+            --dpad-shine: #1a3b52;
+            --warning-gold: #ffaa00;
+        }
+
+        * { box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; }
+        
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--color-bg);
+            background-image: 
+                linear-gradient(rgba(0, 140, 179, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 140, 179, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--color-text);
+            font-family: var(--font-sci);
+            height: 100vh; width: 100vw;
+            overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        /* 微信提示 */
+        #wx-mask {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,5,26, 0.98); z-index: 20000;
+            display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        #wx-mask p { font-size: 5vmin; color: var(--color-glow); margin: 2vmin; }
+        #wx-arrow { font-size: 12vmin; color: var(--warning-gold); animation: floatUp 1.5s infinite; margin-bottom: 20px; }
+        @keyframes floatUp { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
+        /* 浏览器引导 */
+        #support-mask {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,2,10, 0.98); z-index: 20000;
+            display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 5vmin;
+        }
+        .support-box {
+            border: 1px solid var(--color-border); background: rgba(0, 20, 40, 0.8);
+            padding: 4vmin; border-radius: 2vmin; width: 80%; max-width: 400px;
+            box-shadow: 0 0 20px rgba(0, 234, 255, 0.2); animation: popIn 0.3s ease-out;
+        }
+        @keyframes popIn { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
+        .support-title { font-size: 4vmin; color: var(--warning-gold); margin-bottom: 3vmin; font-weight: bold; }
+        .support-item { margin: 3vmin 0; display: flex; align-items: center; flex-direction: column; gap: 1vmin; }
+        .support-icon { font-size: 6vmin; }
+        .support-text { font-size: 3vmin; color: #ccc; }
+        .support-highlight { color: #fff; font-weight: bold; }
+        .close-mask-btn { margin-top: 4vmin; padding: 2vmin 6vmin; background: var(--color-glow); color: #000; font-weight: bold; border: none; border-radius: 5px; font-size: 3.5vmin; }
+
+        /* 竖屏提示 */
+        #portrait-warning {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000208;
+            display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10000;
+        }
+        @media (orientation: portrait) { #portrait-warning { display: flex; } }
+
+        .scan-frame { width: 20vmin; height: 20vmin; position: relative; margin-bottom: 6vmin; animation: breathe 3s ease-in-out infinite; }
+        .scan-corner { position: absolute; width: 5vmin; height: 5vmin; border: 3px solid var(--warning-gold); box-shadow: 0 0 10px rgba(255, 170, 0, 0.5); transition: all 0.3s; }
+        .scan-frame::after { content: '+'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -54%); font-size: 5vmin; color: rgba(255, 170, 0, 0.4); font-weight: 100; pointer-events: none; }
+        .tl { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 4px 0 0 0; }
+        .tr { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 4px 0 0; }
+        .bl { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 4px; }
+        .br { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 4px 0; }
+        .scan-text { font-size: 6vmin; font-weight: 700; color: #fff; letter-spacing: 4px; margin-bottom: 2vmin; text-transform: uppercase; text-shadow: 0 0 15px rgba(255,255,255,0.3); }
+        .scan-sub { font-size: 3vmin; color: #666; letter-spacing: 1px; font-weight: 400; }
+        @keyframes breathe { 0%,100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.05); opacity: 1; } }
+
+        /* 顶部栏 */
+        #top-bar { position: relative; width: 100%; height: 12vmin; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 2vmin; background: linear-gradient(180deg, rgba(0,20,40,0.95), rgba(0,5,26,0.8)); border-bottom: 1px solid rgba(0, 234, 255, 0.3); z-index: 50; }
+        #top-bar::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 60%; height: 2px; background: var(--color-glow); box-shadow: 0 0 15px var(--color-glow); z-index: 51; }
+
+        .meta-container { display: flex; gap: 2vmin; z-index: 52; flex: 1; }
+        .meta-btn { padding: 0 2.5vmin; height: 6vmin; font-size: 2.2vmin; font-weight: bold; color: #fff; background: linear-gradient(180deg, rgba(0, 140, 255, 0.8), rgba(0, 60, 160, 0.6)); border: 1px solid #00aaff; box-shadow: 0 0 10px rgba(0, 140, 255, 0.3); clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%); display: flex; align-items: center; justify-content: center; gap: 1vmin; transition: all 0.2s; }
+        .meta-btn:active, .meta-btn.active-state { background: #00eaff !important; color: #000 !important; box-shadow: 0 0 15px #00eaff; }
+        .icon-svg { width: 2.5vmin; height: 2.5vmin; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+        #status-pill { flex: 1.5; display: flex; justify-content: center; align-items: center; gap: 10px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--color-glow); padding: 0.5vmin 2vmin; border-radius: 30px; box-shadow: 0 0 15px rgba(0, 234, 255, 0.1); cursor: pointer; transition: all 0.3s; }
+        .led { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: 0.3s; }
+        .led.on { background: #0f0; box-shadow: 0 0 10px #0f0; }
+        #status-text { font-size: 2.5vmin; font-weight: bold; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%; }
+
+        .right-controls { flex: 1; display: flex; justify-content: flex-end; }
+        #fullscreen-btn { background: rgba(0, 40, 80, 0.6); border: 1px solid var(--color-glow); color: var(--color-glow); width: 8vmin; height: 6vmin; border-radius: 6px; font-size: 4vmin; pointer-events: auto; display: flex; justify-content: center; align-items: center; }
+
+        #main-stage { flex: 1; display: flex; width: 100%; height: 100%; padding: 8vmin 0 4vmin 0; position: relative; align-items: center; }
+        .side-panel { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; position: relative; }
+        .control-grid { display: grid; grid-template-columns: repeat(3, var(--btn-size)); grid-template-rows: repeat(3, var(--btn-size)); gap: 0; justify-content: center; align-items: center; flex-shrink: 0; z-index: 20; }
+        .empty-cell { pointer-events: none; }
+        .bottom-btn-container { position: relative; width: 100%; display: flex; margin-top: 4vmin; flex-shrink: 0; padding: 0 4vmin; }
+        .bottom-left-align { justify-content: flex-start; }
+        .bottom-right-align { justify-content: flex-end; }
+        .bottom-btn { width: 20vmin; height: 8vmin; font-size: 3.5vmin; clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%); border-bottom: 3px solid var(--color-glow); }
+        
+        .cyber-btn { display: flex; justify-content: center; align-items: center; font-weight: 700; color: var(--color-text); background: linear-gradient(135deg, rgba(0, 60, 100, 0.7), rgba(0, 20, 40, 0.9)); border: 1px solid var(--color-border); box-shadow: inset 0 0 15px rgba(0, 234, 255, 0.2); text-shadow: 0 0 8px var(--color-glow); backdrop-filter: blur(5px); transition: all 0.05s; }
+        .cyber-btn.active-state, .cyber-btn:active { transform: scale(0.94); background: #00d2e6 !important; color: #000 !important; border-color: #fff !important; box-shadow: 0 0 20px #00eaff, inset 0 0 10px rgba(255,255,255,0.5) !important; text-shadow: none; z-index: 100; }
+        
+        .dpad-btn { font-size: var(--icon-size); background: var(--dpad-bg); border: 1px solid rgba(0, 234, 255, 0.3); box-shadow: inset 0 0 5px rgba(0,0,0,0.8); }
+        #dp-up { border-radius: 12px 12px 0 0; border-bottom: none; background: linear-gradient(to top, var(--dpad-bg), var(--dpad-shine)); }
+        #dp-down { border-radius: 0 0 12px 12px; border-top: none; background: linear-gradient(to bottom, var(--dpad-bg), var(--dpad-shine)); }
+        #dp-left { border-radius: 12px 0 0 12px; border-right: none; background: linear-gradient(to left, var(--dpad-bg), var(--dpad-shine)); }
+        #dp-right { border-radius: 0 12px 12px 0; border-left: none; background: linear-gradient(to right, var(--dpad-bg), var(--dpad-shine)); }
+        .dpad-center-deco { background: var(--dpad-bg); border: none; position: relative; }
+        .dpad-center-deco::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20%; height: 20%; border-radius: 50%; background: rgba(0, 234, 255, 0.1); box-shadow: inset 0 0 2px rgba(0, 234, 255, 0.5); }
+        
+        .action-btn { width: 90%; height: 90%; margin: auto; border-radius: 50%; font-size: var(--icon-size); position: relative; border: 2px solid var(--color-border); background: radial-gradient(circle, rgba(0,60,100,0.6) 0%, rgba(0,10,20,0.95) 100%); }
+        .action-btn::before { content: ''; position: absolute; top: 50%; left: 50%; width: 120%; height: 120%; transform: translate(-50%, -50%); border-radius: 50%; border: 2px dashed rgba(0, 234, 255, 0.3); opacity: 0.5; animation: rotateRing 15s linear infinite; pointer-events: none; }
+        .action-btn.active-state { border-radius: 50%; box-shadow: 0 0 30px var(--color-glow); }
+        @keyframes rotateRing { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        .shoulder-group { position: absolute; top: 13vmin; display: flex; flex-direction: column; gap: 1.5vmin; z-index: 30; }
+        .shoulder-group.left { left: 1vmin; }
+        .shoulder-group.right { right: 1vmin; }
+        .shoulder-btn { width: 22vmin; height: 10vmin; font-size: 4.5vmin; letter-spacing: 2px; clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%); background: linear-gradient(90deg, rgba(0, 40, 60, 0.9), rgba(0, 20, 30, 0.95)); }
+        .shoulder-group.right .shoulder-btn { clip-path: polygon(0 0, 90% 0, 100% 20%, 100% 100%, 10% 100%, 0 80%); background: linear-gradient(-90deg, rgba(0, 40, 60, 0.9), rgba(0, 20, 30, 0.95)); }
+
+        #branding { position: absolute; bottom: 1vmin; left: 50%; transform: translateX(-50%); font-size: 2vmin; color: rgba(255,255,255,0.3); letter-spacing: 4px; font-weight: 700; text-shadow: 0 0 10px rgba(0, 247, 255, 0.3); pointer-events: none; white-space: nowrap; z-index: 10; }
+        #branding span { color: var(--color-glow); }
+
+    </style>
+</head>
+<body>
+
+    <div id="wx-mask">
+        <div id="wx-arrow">↗</div>
+        <p>请点击右上角</p>
+        <p>选择在浏览器打开</p>
+        <p style="font-size:3vmin; color:#666; margin-top:20px;">(微信内核不支持蓝牙)</p>
+    </div>
+
+    <div id="support-mask">
+        <div class="support-box">
+            <div class="support-title">⚠️ 连接助手</div>
+            <div class="support-item">
+                <div class="support-icon">🍎</div>
+                <div class="support-text"><span class="support-highlight">iOS 用户</span></div>
+                <div class="support-text">请下载 <span class="support-highlight" style="color:#00eaff">Bluefy</span> 浏览器 APP</div>
+                <div class="support-text">(Safari/Chrome 不支持蓝牙)</div>
+            </div>
+            <div style="width:100%; height:1px; background:rgba(255,255,255,0.2); margin: 2vmin 0;"></div>
+            <div class="support-item">
+                <div class="support-icon">🤖</div>
+                <div class="support-text"><span class="support-highlight">Android 用户</span></div>
+                <div class="support-text">请使用 <span class="support-highlight" style="color:#ffaa00">Chrome</span> 浏览器</div>
+            </div>
+            <button class="close-mask-btn" onclick="document.getElementById('support-mask').style.display='none'">我知道了</button>
+        </div>
+    </div>
+
+    <div id="portrait-warning">
+        <div class="scan-frame">
+            <div class="scan-corner tl"></div>
+            <div class="scan-corner tr"></div>
+            <div class="scan-corner bl"></div>
+            <div class="scan-corner br"></div>
+        </div>
+        <div class="scan-text">TAP TO START</div>
+        <div class="scan-sub">点击屏幕开启全屏模式</div>
+    </div>
+
+    <div id="top-bar">
+        <div class="meta-container">
+            <div class="cyber-btn meta-btn" data-bit="3" data-group="2">
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                HOME
+            </div>
+            <div class="cyber-btn meta-btn" data-bit="2" data-group="2">
+                <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                RELAX
+            </div>
+        </div>
+
+        <div id="status-pill">
+            <div class="led" id="led"></div>
+            <span id="status-text">SYSTEM LINK</span>
+        </div>
+
+        <div class="right-controls">
+            <div id="fullscreen-btn" onclick="triggerFullScreenLogic()">⛶</div>
+        </div>
+    </div>
+
+    <div class="shoulder-group left">
+        <div class="cyber-btn shoulder-btn" id="sb-l1" data-bit="0" data-group="2">L1</div>
+        <div class="cyber-btn shoulder-btn" id="sb-l2" data-bit="4" data-group="2">L2</div>
+    </div>
+    <div class="shoulder-group right">
+        <div class="cyber-btn shoulder-btn" id="sb-r1" data-bit="1" data-group="2">R1</div>
+        <div class="cyber-btn shoulder-btn" id="sb-r2" data-bit="5" data-group="2">R2</div>
+    </div>
+
+    <div id="main-stage">
+        <div class="side-panel">
+            <div class="control-grid">
+                <div class="empty-cell"></div>
+                <div class="cyber-btn dpad-btn" id="dp-up" data-bit="0" data-group="1">▲</div>
+                <div class="empty-cell"></div>
+                <div class="cyber-btn dpad-btn" id="dp-left" data-bit="2" data-group="1">◀</div>
+                <div class="empty-cell dpad-center-deco"></div>
+                <div class="cyber-btn dpad-btn" id="dp-right" data-bit="3" data-group="1">▶</div>
+                <div class="empty-cell"></div>
+                <div class="cyber-btn dpad-btn" id="dp-down" data-bit="1" data-group="1">▼</div>
+                <div class="empty-cell"></div>
+            </div>
+            <div class="bottom-btn-container bottom-left-align">
+                 <div class="cyber-btn bottom-btn" id="sb-l3" data-bit="6" data-group="2">L3</div>
+            </div>
+        </div>
+
+        <div class="side-panel">
+            <div class="control-grid">
+                <div class="empty-cell"></div>
+                <div class="cyber-btn action-btn" id="btn-tri" data-bit="6" data-group="1">△</div>
+                <div class="empty-cell"></div>
+                <div class="cyber-btn action-btn" id="btn-squ" data-bit="4" data-group="1">□</div>
+                <div class="empty-cell"></div>
+                <div class="cyber-btn action-btn" id="btn-cir" data-bit="5" data-group="1">○</div>
+                <div class="empty-cell"></div>
+                <div class="cyber-btn action-btn" id="btn-cro" data-bit="7" data-group="1">×</div>
+                <div class="empty-cell"></div>
+            </div>
+            <div class="bottom-btn-container bottom-right-align">
+                <div class="cyber-btn bottom-btn" id="sb-r3" data-bit="7" data-group="2">R3</div>
+           </div>
+        </div>
+    </div>
+
+    <div id="branding">FASHIONSTAR <span>STUDIO</span></div>
+
+    <script>
+        const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+        const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+        
+        let device, characteristic, isConnected = false;
+        let payload = { btn1: 0, btn2: 0 };
+        let isWriting = false;
+
+        function vibrate() { if(navigator.vibrate) navigator.vibrate(40); }
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        function isWeChat() { return /MicroMessenger/i.test(navigator.userAgent); }
+        if(isWeChat()) document.getElementById('wx-mask').style.display = 'flex';
+
+        const portraitWarning = document.getElementById('portrait-warning');
+        portraitWarning.addEventListener('click', async () => { await triggerFullScreenLogic(); });
+
+        async function triggerFullScreenLogic() {
+             try {
+                if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen();
+                } else if(document.exitFullscreen) {
+                    document.exitFullscreen();
+                    return;
+                }
+                if (screen.orientation && screen.orientation.lock) {
+                    try { await screen.orientation.lock('landscape'); } catch(e){}
+                }
+            } catch(e) { console.log(e); }
+        }
+
+        document.querySelectorAll('[data-bit]').forEach(btn => {
+            const bit = parseInt(btn.dataset.bit);
+            const group = parseInt(btn.dataset.group);
+            
+            const press = (e) => {
+                if (e.type === 'touchstart' && e.cancelable) e.preventDefault(); 
+                vibrate();
+                btn.classList.add('active-state');
+                if(group===1) payload.btn1 |= (1<<bit);
+                if(group===2) payload.btn2 |= (1<<bit);
+            };
+            
+            const release = (e) => {
+                if (e.type === 'touchend' && e.cancelable) e.preventDefault();
+                btn.classList.remove('active-state');
+                if(group===1) payload.btn1 &= ~(1<<bit);
+                if(group===2) payload.btn2 &= ~(1<<bit);
+            };
+
+            btn.addEventListener('touchstart', press, {passive: false});
+            btn.addEventListener('touchend', release, {passive: false});
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+        });
+
+        // 蓝牙连接
+        document.getElementById('status-pill').addEventListener('click', async () => {
+            if(isConnected) return;
+            const statusTxt = document.getElementById('status-text');
+            const led = document.getElementById('led');
+            
+            // 1. 第一层检测
+            if (!navigator.bluetooth || !navigator.bluetooth.requestDevice) {
+                document.getElementById('support-mask').style.display = 'flex';
+                return; 
+            }
+
+            try {
+                statusTxt.innerText = "SCANNING...";
+                
+                // === 关键修改 V21: 混合搜索策略 ===
+                // 这能解决 IOS 搜不到名字为 Arduino 的问题
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { name: 'ESP32_Pro_Remote' }, // 你的预期名字
+                        { name: 'Arduino' },          // 实际可能显示的名字
+                        { services: [SERVICE_UUID] }  // 终极手段：通过UUID搜索
+                    ],
+                    optionalServices: [SERVICE_UUID]
+                });
+                
+                device.addEventListener('gattserverdisconnected', onDisconnect);
+                statusTxt.innerText = "LINKING...";
+
+                const server = await device.gatt.connect();
+                await sleep(500); // 关键延时
+                
+                statusTxt.innerText = "GET SERV...";
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                
+                statusTxt.innerText = "GET CHAR...";
+                characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                
+                isConnected = true;
+                // 显示连接到的真实设备名字，让用户安心
+                statusTxt.innerText = "LINKED: " + (device.name || "DEVICE");
+                statusTxt.style.color = "#00eaff";
+                led.classList.add('on');
+                
+                isWriting = false;
+                startLoop();
+
+            } catch(e) {
+                console.error(e);
+                
+                const errStr = e.message.toLowerCase();
+                if (errStr.includes("blue") || errStr.includes("available") || errStr.includes("support")) {
+                    document.getElementById('support-mask').style.display = 'flex';
+                    statusTxt.innerText = "SYSTEM LINK"; 
+                    return; 
+                }
+
+                statusTxt.innerText = "ERR: " + e.message.substring(0, 8); 
+                statusTxt.style.color = "red";
+                setTimeout(() => {
+                    statusTxt.innerText = "SYSTEM LINK";
+                    statusTxt.style.color = "#fff";
+                }, 3000);
+            }
+        });
+
+        function onDisconnect() {
+            isConnected = false;
+            document.getElementById('status-text').innerText = "LINK LOST";
+            document.getElementById('status-text').style.color = "#fff";
+            document.getElementById('led').classList.remove('on');
+        }
+
+        async function startLoop() {
+            while(isConnected) {
+                if (!isWriting) {
+                    isWriting = true; 
+                    const data = new Uint8Array([128, 128, 128, 128, payload.btn1, payload.btn2]);
+                    try { await characteristic.writeValue(data); } catch(e){}
+                    isWriting = false; 
+                }
+                // === 关键修改: 增加间隔至 100ms ===
+                // 解决 Bluefy 断连问题
+                await sleep(100);
+            }
+        }
+    </script>
+</body>
+</html>

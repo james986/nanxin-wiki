@@ -1,0 +1,1418 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<title>FashionStar Web UART Servo Debugger</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{
+    --bg:#F5F6F7;--card:#F5F5F5;--line:#e0e0e0;--ink:#202124;--hint:#5f6368;
+  }
+  *{box-sizing:border-box}
+  body{font-family:system-ui,Segoe UI,Arial; margin:0; padding:12px; background:var(--bg); color:var(--ink)}
+  h1,h2,h3{margin:8px 0 12px}
+  /* 语言切换按钮样式 */
+  #lang-switch {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #fff;
+    border: 1px solid #dadce0;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #1A73E8;
+  }
+  #lang-switch:hover { background: #f1f3f4; }
+
+  .grid{display:grid;grid-template-columns:10fr 29fr;gap:12px}
+  @media (max-width:1199px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px}
+  .row{display:flex; flex-wrap:wrap; gap:4px; align-items:center;margin-top:4px}
+  .col{display:flex; flex-direction:column; gap:4px}
+  label{display:flex; flex-direction:column; gap:4px; font-size:12px}
+  input, select, textarea {
+    padding: 6px 6px;
+    border-radius: 6px;
+    border: 1px solid #dadce0;   
+    background: #fff;            
+    color: #202124;              
+    font-size: 12px;
+    box-sizing: border-box;
+  }
+  .monitor-toolbar { align-items: center; gap: 8px; flex-wrap: wrap; }
+  .monitor-toolbar .inline-field{
+    display: inline-flex; 
+    flex-direction: row;   
+    align-items: center; 
+    gap: 4px; 
+    margin-left: 8px;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: #1A73E8;       
+    outline: none;
+    box-shadow: 0 0 0 1px #1A73E8;
+  }
+
+  input[type="number"]{width:90px}
+  input.hex{font-family:ui-monospace,monospace}
+  button {
+    background: #1A73E8;        
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 6px;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    font-size:12px; 
+  }
+  #rxTableContainer, #txTableContainer {
+    max-height: 200px;           
+    overflow-y: auto;            
+    border:1px solid var(--line);
+  }
+  #rxTableContainer table,
+  #txTableContainer table {
+    width:100%;
+    border-collapse:collapse;
+    font-size:12px;
+  }
+  #rxTableContainer th, #rxTableContainer td,
+  #txTableContainer th, #txTableContainer td {
+    border-bottom:1px solid var(--line);
+    padding:6px;
+    text-align:left;
+    vertical-align:top;
+  }
+
+  button:hover { background: #1765CC; }
+  button:active { background: #174EA6; transform: scale(0.98); }
+  
+  /* 连接：绿色 */
+  #btnOpen, #qa_open, #btnOpen2 { background: #16a34a; border: 1px solid #128a3e; color: #fff; }
+  #btnOpen:hover, #qa_open:hover, #btnOpen2:hover { background: #15803d; }
+
+  /* 断开：红色 */
+  #btnClose, #qa_close, #btnClose2 { background: #dc2626; border: 1px solid #b91c1c; color: #fff; }
+  #btnClose:hover, #qa_close:hover, #btnClose2:hover { background: #b91c1c; }
+
+  #btnOpen:disabled, #btnClose:disabled { opacity: .6; cursor: not-allowed; }
+
+  table{width:100%; border-collapse:collapse; font-size:12px}
+  .sync-row{ display:flex; flex-wrap:wrap; gap:6px; align-items:flex-end; }
+  .sync-row label{ display:flex; flex-direction:column; gap:4px; margin:0; }
+
+  th,td{border-bottom:1px solid var(--line); padding:6px; text-align: left; vertical-align:top}
+  .id{font-family:ui-monospace,monospace}
+  .badge{padding:2px 6px; border-radius:8px; border:1px solid var(--line); font-size:11px}
+  .hint{font-size:12px; color:var(--hint)}
+  .ok{color:#34a853}
+  .err{color:#ff8080}
+  .mono{font-family:ui-monospace,monospace}
+  details{border:1px dashed var(--line); border-radius:10px; padding:6px}
+  summary{cursor:pointer; font-weight:600}
+  .pill{border:1px solid var(--line); padding:3px 6px; border-radius:999px; font-size:12px}
+  .twocol{display:grid; grid-template-columns:2fr 3fr; gap:4px}
+  @media (max-width:900px){ .twocol{grid-template-columns:1fr 1fr} }
+  .hl{background: #f5f5f5;; border:1px solid var(--line); border-radius:10px; padding:4px}
+  .formgrid{display:grid; grid-template-columns:repeat(3,minmax(30px,1fr)); gap:1px;}
+  .sect{margin-top:8px; padding-top:8px; border-top:1px dashed var(--line)}
+  #monitorChart { width: 100% !important; }
+
+  /* 快速检测与控制 */
+  #quickPanel .chk-wrap{ display: grid; grid-template-columns: repeat(6, minmax(60px, 1fr)); gap: 6px; }
+  @media (max-width: 900px){ #quickPanel .chk-wrap{ grid-template-columns: repeat(3, minmax(60px, 1fr)); } }
+  #quickPanel .chk-wrap label{ display:flex; align-items:center; gap:6px; background:#fff; border:1px solid #dadce0; border-radius:8px; padding:6px; }
+  #quickPanel .chk-wrap input[type="checkbox"]{ width:16px; height:16px; }
+  #btnQuickStop { background: #b91c1c; border: 1px solid #991b1b; color: #fff; }
+  #btnQuickStop:hover { background: #7f1d1d; }
+  
+  #quickPanel .chk-wrap { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+  @media (max-width: 1200px){ #quickPanel .chk-wrap { grid-template-columns: repeat(6, 1fr); } }
+  @media (max-width: 900px) { #quickPanel .chk-wrap { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 600px) { #quickPanel .chk-wrap { grid-template-columns: repeat(3, 1fr); } }
+
+  #quickPanel .servo.selected{
+    background: linear-gradient(180deg, rgba(26,115,232,.16), rgba(21, 79,168,.14));
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px var(--acc-weak) inset, 0 2px 10px rgba(26,115,232,.15) inset;
+    color: #1c1c1c;                          
+  }
+  #quickPanel .servo.selected:hover{
+    background: linear-gradient(180deg, rgba(26,115,232,.22), rgba(21, 79,168,.20));
+    box-shadow: 0 0 0 2px rgba(26,115,232,.45) inset, 0 3px 12px rgba(26,115,232,.20) inset;
+  }
+  #quickPanel .servo:focus-visible{ outline: 2px solid rgba(26,115,232,.75); outline-offset: 2px; }
+  #quickPanel .servo input[type="checkbox"]{ display:none; }
+</style>
+
+<script src="./vendor/chart-lite.js"></script>
+
+</head>
+<body>
+<button id="lang-switch">EN</button>
+<h2 data-i18n="app_title">FashionStar Web UART 舵机调试台</h2>
+<div class="grid">
+  <div class="card">
+    <h3 data-i18n="sect_serial">① 串口</h3>
+      <div class="row">
+        <span class="badge" data-i18n="badge_serial">串口</span>
+        <button id="btnChoose" data-i18n="btn_choose_port">选择串口</button>
+        <button id="btnOpen">🔗 <span data-i18n="btn_connect">连接</span></button>
+        <button id="btnClose">🔌 <span data-i18n="btn_disconnect">断开</span></button>
+        <span id="portInfo" class="hint" data-i18n="status_disconnected">未连接</span>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label><span data-i18n="lbl_baud">波特率</span>
+          <select id="baud">
+            <option value="9600">9600</option>
+            <option value="19200">19200</option>
+            <option value="38400">38400</option>
+            <option value="57600">57600</option>
+            <option value="115200" selected>115200</option>
+            <option value="250000">250000</option>
+            <option value="500000">500000</option>
+            <option value="1000000">1000000</option>
+          </select>
+        </label>
+        <label><span data-i18n="lbl_databits">数据位</span>
+          <select id="databits"><option>8</option></select>
+        </label>
+        <label><span data-i18n="lbl_stopbits">停止位</span>
+          <select id="stopbits"><option>1</option><option>2</option></select>
+        </label>
+        <label><span data-i18n="lbl_parity">校验</span>
+          <select id="parity"><option>none</option><option>even</option><option>odd</option></select>
+        </label>
+        <label><span data-i18n="lbl_flow">流控</span>
+          <select id="flow"><option>none</option></select>
+        </label>           
+      </div>
+
+
+    <h3 class="sect" data-i18n="sect_quick">② 快速检测和控制</h3>
+    <div class="hint" style="color:#E28045;" data-i18n="hint_quick_guide">
+      1.请先连接串口后，再使用<br>
+      2.请按照标号顺序点击按钮<br>
+    </div>    
+
+    <section class="card" id="quickPanel" style="margin-top:4px;">
+      <div class="row">
+        <button id="btnQuickScan" data-i18n="btn_quick_scan">① 检测在线舵机</button>
+        <button id="btnQuickStop" style="display:none" data-i18n="btn_quick_stop">停止扫描</button>
+        <span id="quickHint" class="hint"></span>
+      </div>
+
+      <div id="quickChkWrap" class="chk-wrap" style="margin-top:4px;"></div>
+
+      <div class="row" style="margin-top:4px;">
+        <button id="btnQuickMove" disabled data-i18n="btn_quick_move">② 控制选中舵机：+30° → −30°</button>
+      </div>
+    </section>
+
+    <h3 class="sect" data-i18n="sect_aux">辅助功能</h3>
+    <section class="card" style="margin-top:4px;">
+    <div class="subsect">
+      <h4 data-i18n="subsect_raw_hex">原始 HEX 发送</h4>
+      <div class="row" style="display:flex; align-items:center; gap:4px;">
+        <label for="rawHex" data-i18n="lbl_raw_hex">HEX（空格分隔）</label>
+        <input id="rawHex" class="hex" placeholder="12 4C 01 01 03 63">
+        <button id="btnSendRaw" data-i18n="btn_send_raw">直接发送</button>
+        <span id="rawInfo" class="hint"></span>
+      </div>
+    </div>
+
+    <div class="subsect">
+      <h4 data-i18n="subsect_io">导入与导出</h4>
+      <div class="row">
+        <button id="btnExportCsv" data-i18n="btn_export_csv">导出发送+接收CSV</button>
+        <button id="btnClearRx" data-i18n="btn_clear_rx">清空接收</button>
+        <button id="btnClearTx" data-i18n="btn_clear_tx">清空发送</button>
+      </div>
+    </div>
+    </section>
+  </div>
+<input id="g_servo_id" type="number" value="0" hidden>
+
+  <div class="card">
+    <h3 data-i18n="sect_commands">舵机常用指令</h3>
+    <div class="twocol">
+      <div class="col">
+
+        <details open>
+          <summary data-i18n="cmd_single_turn">单圈角度控制 / 读取</summary>
+          <div class="formgrid">
+            <label>servo_id<input id="s_id" type="number" min="0" max="254" value="0"></label>
+            <label>angle(°)
+              <input id="s_angle_deg" type="number" min="-180" max="180" step="0.1" value="90.0">
+            </label>
+            <label>interval(ms)<input id="s_interval" type="number" min="0" max="65535" value="1000"></label>
+            <label>acc(ms)<input id="s_acc" type="number" min="0" max="65535" value="100"></label>
+            <label>dec(ms)<input id="s_dec" type="number" min="0" max="65535" value="100"></label>
+            <label>power(mW)<input id="s_power" type="number" min="0" max="65535" value="0"></label>
+            <label>targetVelocity(°/s)<input id="s_vel" type="number" min="0" max="750" value="200"></label>
+          </div>
+          <div class="row">
+            <button data-cmd="8" class="btnCmd" data-i18n="btn_simple_mode">简易模式</button>
+            <button data-cmd="0B" class="btnCmd" data-i18n="btn_time_mode">基于加减速时间</button>
+            <button data-cmd="0C" class="btnCmd" data-i18n="btn_speed_mode">基于目标速度</button>
+            <button data-cmd="0A" class="btnCmd" data-i18n="btn_read_angle">读取角度</button>
+          </div>
+        </details>
+
+        <details>
+          <summary data-i18n="cmd_damping">阻尼模式</summary>
+          <div class="row" style="display:flex; align-items:center; gap:8px;">
+            <label style="display:flex; flex-direction:row; align-items:center; gap:4px;">
+              servo_id
+              <input id="d_id" type="number" min="0" max="255" value="0">
+            </label>
+            <label style="display:flex; flex-direction:row; align-items:center; gap:4px;">
+              power(mW)
+              <input id="d_power" type="number" min="0" max="65535" value="500">
+            </label>
+            <button data-cmd="9" class="btnCmd" data-i18n="btn_set">设置</button>
+          </div>
+        </details>
+
+
+        <details>
+          <summary data-i18n="cmd_multi_turn">多圈角度控制 / 读取</summary>
+          <div class="formgrid">
+            <label>servo_id<input id="m_id" type="number" min="0" max="254" value="0"></label>
+            <label>angle(°)<input id="m_angle_deg" type="number" min="-368640" max="368640" step="0.1" value="400.0"></label>
+            <label>interval(ms)<input id="m_interval32" type="number" min="0" max="4096000" value="2000"></label>
+            <label>acc(ms)<input id="m_acc" type="number" min="0" max="65535" value="100"></label>
+            <label>dec(ms)<input id="m_dec" type="number" min="0" max="65535" value="100"></label>
+            <label>power(mW)<input id="m_power" type="number" min="0" max="65535" value="0"></label>
+            <label>targetVelocity(°/s)<input id="m_vel" type="number" min="0" max="750" value="200"></label>
+          </div>
+          <div class="row">
+            <button data-cmd="0D" class="btnCmd" data-i18n="btn_simple_mode">简易模式</button>
+            <button data-cmd="0E" class="btnCmd" data-i18n="btn_time_mode">基于加减速时间</button>
+            <button data-cmd="0F" class="btnCmd" data-i18n="btn_speed_mode">基于目标速度</button>
+            <button data-cmd="10" class="btnCmd" data-i18n="btn_read_angle">读取角度</button>
+            <button data-cmd="11" class="btnCmd" data-i18n="btn_clear_turns">清除圈数</button>
+          </div>
+        </details>
+
+        <details>
+          <summary data-i18n="cmd_async">异步控制</summary>
+          <div class="row">
+            <label style="display:flex; flex-direction:row; align-items:center; gap:4px;">
+              EndAsync cancel?
+              <select id="async_cancel">
+                <option value="0" data-i18n="opt_async_exec">0 执行</option>
+                <option value="1" data-i18n="opt_async_cancel">1 取消</option>
+              </select>
+            </label>
+            <button data-cmd="12" class="btnCmd" data-i18n="btn_async_write">异步写入</button>
+            <button data-cmd="13" class="btnCmd" data-i18n="btn_async_exec">异步执行</button>
+          </div>
+        </details>
+
+        <details>
+          <summary data-i18n="cmd_monitor">数据监控</summary>
+          <div class="row">
+            <label style="display:flex; flex-direction:row; align-items:center; gap:4px;">
+              monitor servo_id
+              <input id="mon_id" type="number" min="0" max="254" value="0">
+            </label>
+            <button data-cmd="16" class="btnCmd" data-i18n="btn_set">设置</button>
+          </div>
+        </details>
+ 
+        <details>
+          <summary data-i18n="cmd_origin">原点设置</summary>
+          <div class="row">
+            <label style="display:flex; flex-direction:row; align-items:center; gap:4px;">
+              servo_id
+              <input id="org_id" type="number" min="0" max="254" value="0">
+            </label>
+            <button data-cmd="17" class="btnCmd" data-i18n="btn_set">设置</button>
+          </div>
+        </details>
+
+        <details>
+          <summary data-i18n="cmd_stop">停止控制</summary>
+          <div class="row">
+            <label style="display:flex; flex-direction:row; align-items:center; gap:4px;">
+              servo_id
+              <input id="stp_id" type="number" min="0" max="254" value="0">
+            </label>
+            <label style="display:flex; flex-direction:row; align-items:center; gap:4px;">
+              stop method
+              <select id="stp_method">
+                <option value="16" data-i18n="opt_stop_release">0x10 泄力</option>
+                <option value="17" data-i18n="opt_stop_lock">0x11 锁力</option>
+                <option value="18" data-i18n="opt_stop_damp">0x12 阻尼</option>
+              </select>
+            </label>
+            <label style="display:flex; flex-direction:row; align-items:center; gap:4px;">
+              stop power(mW)
+              <input id="stp_power" type="number" min="0" max="65535" value="5000">
+            </label>
+            <button data-cmd="18" class="btnCmd" data-i18n="btn_set">设置</button>
+          </div>
+        </details>
+
+        <details>
+          <summary data-i18n="cmd_sync">同步控制</summary>
+
+          <div class="row" style="margin-bottom:8px;">
+            <label>
+              <span data-i18n="lbl_select_cmd">选择指令：</span>
+              <select id="syncCmdSelect">
+                <option value="8" data-i18n="opt_sync_8">8 批量单圈角度简易控制</option>
+                <option value="11" data-i18n="opt_sync_11">11 批量单圈角度·基于加减速时间</option>
+                <option value="12" data-i18n="opt_sync_12">12 批量单圈角度·基于目标速度</option>
+                <option value="13" data-i18n="opt_sync_13">13 批量多圈角度简易控制</option>
+                <option value="14" data-i18n="opt_sync_14">14 批量多圈角度·基于加减速时间</option>
+                <option value="15" data-i18n="opt_sync_15">15 批量多圈角度·基于目标速度</option>
+                <option value="22" data-i18n="opt_sync_22">22 舵机数据监控</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="syncCmdContainer"></div>
+
+          <div class="row buttons">
+            <button id="btnSyncAdd" data-i18n="btn_add_servo">+ 添加舵机</button>
+            <button id="btnSyncSend" data-i18n="btn_send">发送</button>
+          </div>
+        </details>
+
+
+
+      </div>
+
+      <div class="col">
+        <h4 style="margin-top:12px" data-i18n="sect_tx_log">发送记录</h4>
+        <div id="txTableContainer">
+          <table>
+            <thead><tr><th>#</th><th data-i18n="th_time">时间</th><th data-i18n="th_frame">帧（HEX）</th></tr></thead>
+            <tbody id="txBody"></tbody>
+          </table>
+        </div>
+
+        <h4 style="margin-top:12px" data-i18n="sect_rx_log">实时接收</h4>
+        <div id="rxTableContainer">
+          <table>
+            <thead><tr><th>#</th><th data-i18n="th_time">时间</th><th>Cmd</th><th data-i18n="th_len">长度</th><th data-i18n="th_ok">校验OK</th><th data-i18n="th_content">内容（结构化）</th></tr></thead>
+            <tbody id="rxBody"></tbody>
+          </table>
+        </div>
+        
+        <h4 style="margin-top:12px" data-i18n="sect_realtime_chart">实时曲线</h4>
+        <div class="row monitor-toolbar" style="margin-bottom:8px;">
+          <button id="btnStartMonitor" data-i18n="btn_start_mon">开始监控</button>
+          <button id="btnStopMonitor" data-i18n="btn_stop_mon">停止监控</button>
+          <label class="inline-field">
+            <span data-i18n="lbl_freq">监控频率(Hz)</span>
+            <input id="monitorFreq" type="number" min="0.1" max="150" step="0.1" value="30" style="width:80px;">
+          </label>
+        </div>
+        <div style="width:100%; max-width:600px; height:300px;">
+          <canvas id="monitorChart"></canvas>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== i18n 配置 =====
+const i18n = {
+  // Title
+  app_title: { zh: 'FashionStar Web UART 舵机调试台', en: 'FashionStar Web UART Servo Debugger' },
+  // Serial
+  sect_serial: { zh: '① 串口', en: '① Serial Port' },
+  badge_serial: { zh: '串口', en: 'Serial' },
+  btn_choose_port: { zh: '选择串口', en: 'Select Port' },
+  btn_connect: { zh: '连接', en: 'Connect' },
+  btn_disconnect: { zh: '断开', en: 'Disconnect' },
+  status_disconnected: { zh: '未连接', en: 'Disconnected' },
+  lbl_baud: { zh: '波特率', en: 'Baud Rate' },
+  lbl_databits: { zh: '数据位', en: 'Data Bits' },
+  lbl_stopbits: { zh: '停止位', en: 'Stop Bits' },
+  lbl_parity: { zh: '校验', en: 'Parity' },
+  lbl_flow: { zh: '流控', en: 'Flow Control' },
+  
+  // Quick Panel
+  sect_quick: { zh: '② 快速检测和控制', en: '② Quick Check & Control' },
+  hint_quick_guide: { 
+    zh: '1.请先连接串口后，再使用<br>2.请按照标号顺序点击按钮', 
+    en: '1. Connect Serial Port first.<br>2. Follow the buttons in order.' 
+  },
+  btn_quick_scan: { zh: '① 检测在线舵机', en: '① Detect Online Servos' },
+  btn_quick_stop: { zh: '停止扫描', en: 'Stop Scan' },
+  btn_quick_move: { zh: '② 控制选中舵机：+30° → −30°', en: '② Test Selected: +30° → −30°' },
+  
+  // Aux
+  sect_aux: { zh: '辅助功能', en: 'Auxiliary' },
+  subsect_raw_hex: { zh: '原始 HEX 发送', en: 'Raw HEX Send' },
+  lbl_raw_hex: { zh: 'HEX（空格分隔）', en: 'HEX (Space separated)' },
+  btn_send_raw: { zh: '直接发送', en: 'Send Raw' },
+  subsect_io: { zh: '导入与导出', en: 'Import / Export' },
+  btn_export_csv: { zh: '导出发送+接收CSV', en: 'Export Tx+Rx CSV' },
+  btn_clear_rx: { zh: '清空接收', en: 'Clear Rx' },
+  btn_clear_tx: { zh: '清空发送', en: 'Clear Tx' },
+
+  // Commands - Accordion
+  sect_commands: { zh: '舵机常用指令', en: 'Common Commands' },
+  cmd_single_turn: { zh: '单圈角度控制 / 读取', en: 'Single-Turn Angle Control / Read' },
+  cmd_damping: { zh: '阻尼模式', en: 'Damping Mode' },
+  cmd_multi_turn: { zh: '多圈角度控制 / 读取', en: 'Multi-Turn Angle Control / Read' },
+  cmd_async: { zh: '异步控制', en: 'Async Control' },
+  cmd_monitor: { zh: '数据监控', en: 'Data Monitor' },
+  cmd_origin: { zh: '原点设置', en: 'Set Origin' },
+  cmd_stop: { zh: '停止控制', en: 'Stop Control' },
+  cmd_sync: { zh: '同步控制', en: 'Sync Control' },
+
+  // Buttons inside commands
+  btn_simple_mode: { zh: '简易模式', en: 'Simple Mode' },
+  btn_time_mode: { zh: '基于加减速时间', en: 'By Acc/Dec Time' },
+  btn_speed_mode: { zh: '基于目标速度', en: 'By Target Speed' },
+  btn_read_angle: { zh: '读取角度', en: 'Read Angle' },
+  btn_set: { zh: '设置', en: 'Set' },
+  btn_clear_turns: { zh: '清除圈数', en: 'Clear Turns' },
+  btn_async_write: { zh: '异步写入', en: 'Async Write' },
+  btn_async_exec: { zh: '异步执行', en: 'Async Exec' },
+  
+  // Options inside commands
+  opt_async_exec: { zh: '0 执行', en: '0 Exec' },
+  opt_async_cancel: { zh: '1 取消', en: '1 Cancel' },
+  opt_stop_release: { zh: '0x10 泄力', en: '0x10 Release' },
+  opt_stop_lock: { zh: '0x11 锁力', en: '0x11 Lock' },
+  opt_stop_damp: { zh: '0x12 阻尼', en: '0x12 Damping' },
+
+  // Sync Control
+  lbl_select_cmd: { zh: '选择指令：', en: 'Command:' },
+  btn_add_servo: { zh: '+ 添加舵机', en: '+ Add Servo' },
+  btn_send: { zh: '发送', en: 'Send' },
+  opt_sync_8: { zh: '8 批量单圈角度简易控制', en: '8 Batch Single-Turn Simple' },
+  opt_sync_11: { zh: '11 批量单圈角度·基于加减速时间', en: '11 Batch Single-Turn By Time' },
+  opt_sync_12: { zh: '12 批量单圈角度·基于目标速度', en: '12 Batch Single-Turn By Speed' },
+  opt_sync_13: { zh: '13 批量多圈角度简易控制', en: '13 Batch Multi-Turn Simple' },
+  opt_sync_14: { zh: '14 批量多圈角度·基于加减速时间', en: '14 Batch Multi-Turn By Time' },
+  opt_sync_15: { zh: '15 批量多圈角度·基于目标速度', en: '15 Batch Multi-Turn By Speed' },
+  opt_sync_22: { zh: '22 舵机数据监控', en: '22 Data Monitor' },
+  btn_del_row: { zh: '删除', en: 'Del' },
+
+  // Right Panel Logs
+  sect_tx_log: { zh: '发送记录', en: 'Tx Log' },
+  sect_rx_log: { zh: '实时接收', en: 'Rx Log' },
+  th_time: { zh: '时间', en: 'Time' },
+  th_frame: { zh: '帧（HEX）', en: 'Frame (HEX)' },
+  th_len: { zh: '长度', en: 'Len' },
+  th_ok: { zh: '校验OK', en: 'CkSum' },
+  th_content: { zh: '内容（结构化）', en: 'Content' },
+  
+  // Chart (FIXED KEYS)
+  sect_realtime_chart: { zh: '实时曲线', en: 'Realtime Chart' },
+  btn_start_mon: { zh: '开始监控', en: 'Start Monitor' },
+  btn_stop_mon: { zh: '停止监控', en: 'Stop Monitor' },
+  lbl_freq: { zh: '监控频率(Hz)', en: 'Freq(Hz)' },
+  chart_current: { zh: '电流(A)', en: 'Current(A)' },
+  chart_voltage: { zh: '电压(V)', en: 'Voltage(V)' },
+  chart_power: { zh: '功率(W)', en: 'Power(W)' },
+  chart_temp: { zh: '温度(°C)', en: 'Temp(°C)' },
+
+  // JS Alerts / Dynamic Text
+  msg_sel_port: { zh: '请先选择串口', en: 'Please select a serial port first.' },
+  msg_opened: { zh: '已打开', en: 'Opened' },
+  msg_open_fail: { zh: '打开失败', en: 'Open Failed' },
+  msg_disconnected: { zh: '已断开', en: 'Disconnected' },
+  msg_disconnect_fail: { zh: '断开失败', en: 'Disconnect Failed' },
+  msg_scan_start: { zh: '扫描中…', en: 'Scanning...' },
+  msg_scan_hint: { zh: '扫描中…（可点击“停止扫描”提前结束）', en: 'Scanning... (Click Stop to abort)' },
+  msg_scan_found: { zh: '在线', en: 'Online' },
+  msg_scan_none: { zh: '未发现在线舵机', en: 'No servos found' },
+  msg_scan_stopped: { zh: '已停止；未收集到在线舵机', en: 'Stopped. No servos found.' },
+  msg_select_servo: { zh: '请先勾选至少一个舵机ID', en: 'Please select at least one servo ID.' },
+  msg_add_row: { zh: '请先添加舵机行', en: 'Please add servo rows first.' },
+  msg_build_fail: { zh: '构帧失败', en: 'Frame Build Failed' },
+  msg_sent: { zh: '已发送', en: 'Sent' },
+  msg_input_hex: { zh: '请输入HEX', en: 'Please input HEX' },
+  msg_sel_port_info: { zh: '已选择串口', en: 'Port Selected' },
+  msg_not_connected: { zh: '未连接', en: 'Not Connected' },
+  msg_stop_scan: { zh: '停止扫描', en: 'Stop Scan' },
+  msg_stopping: { zh: '停止中…', en: 'Stopping...' },
+  msg_aborted: { zh: '（已提前停止）', en: '(Aborted)' }
+};
+
+let currentLang = 'zh';
+
+function t(key) {
+  return (i18n[key] && i18n[key][currentLang]) || key;
+}
+
+function updateLanguage(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  document.getElementById('lang-switch').textContent = lang === 'zh' ? 'EN' : '中文';
+
+  // 1. Static HTML elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[key]) {
+      if (el.tagName === 'INPUT') {
+         // Placeholder logic if needed
+      } else {
+        const icon = el.querySelector('i');
+        if (icon) {
+            const span = el.querySelector('span');
+            if(span) span.innerHTML = i18n[key][lang];
+            else el.innerHTML = i18n[key][lang];
+        } else {
+           el.innerHTML = i18n[key][lang];
+        }
+      }
+    }
+  });
+
+  // 2. Refresh Sync Rows
+  const syncSelect = document.getElementById('syncCmdSelect');
+  if(syncSelect) syncSelect.onchange(); 
+  
+  // 3. Update Chart Labels (FIXED)
+  // 必须直接检测全局对象 window.monitorChart
+  if(window.monitorChart) {
+    window.monitorChart.data.datasets[0].label = t('chart_current');
+    window.monitorChart.data.datasets[1].label = t('chart_voltage');
+    window.monitorChart.data.datasets[2].label = t('chart_power');
+    window.monitorChart.data.datasets[3].label = t('chart_temp');
+    window.monitorChart.update();
+  }
+
+  // 4. Update dynamic button states
+  const btnScan = document.getElementById('btnQuickScan');
+  if (btnScan && !quickScanActive) {
+      btnScan.dataset._oldText = t('btn_quick_scan');
+      if(!btnScan.disabled) btnScan.textContent = t('btn_quick_scan');
+  }
+}
+
+document.getElementById('lang-switch').addEventListener('click', () => {
+  const newLang = currentLang === 'zh' ? 'en' : 'zh';
+  updateLanguage(newLang);
+});
+
+
+// ===== 工具函数 =====
+const HEX_RE=/^(0x)?[0-9a-fA-F]+$/;
+const $=id=>document.getElementById(id);
+const val = (id, def = '') => {
+  const el = $(id);
+  return el ? el.value : def;
+};
+const toHex2 = n => (n&0xFF).toString(16).toUpperCase().padStart(2,'0');
+const toHex = n => '0x'+(n>>>0).toString(16).toUpperCase();
+const nowHHMMSS = () => new Date().toLocaleTimeString();
+
+function parseHexBytes(str){
+  const out=[]; const s=(str||'').trim(); if(!s) return out;
+  for(const t of s.split(/\s+/)){
+    if(!HEX_RE.test(t)) throw new Error('非HEX字节: '+t);
+    const v=parseInt(t,16); if(v<0||v>255) throw new Error('越界字节: '+t);
+    out.push(v);
+  }
+  return out;
+}
+function sum8(arr){ let s=0; for(const b of arr) s=(s+b)&0xFF; return s; }
+const R = {
+  sid:        {min:0,    max:254, step:1},
+  angle16:    {min:-180, max:180, step:0.1},
+  angle32:    {min:-368640, max:368640, step:0.1},
+  interval16: {min:0,    max:65535, step:1},
+  interval32: {min:0,    max:4294967295, step:1},
+  vel:        {min:0,    max:750, step:1},
+  acc:        {min:0,    max:65535, step:1},
+  dec:        {min:0,    max:65535, step:1},
+  power:      {min:0,    max:65535, step:1},
+};
+
+const clamp = (v,min,max)=> Math.min(max, Math.max(min, v));
+function readNumById(id, range){
+  const el = document.getElementById(id);
+  if(!el) throw new Error(`缺少控件 #${id}`);
+  let v = parseFloat(el.value);
+  if (Number.isNaN(v)) v = 0;
+  v = clamp(v, range.min, range.max);
+  el.value = (range.step===0.1) ? v.toFixed(1) : String(Math.round(v));
+  return v;
+}
+
+function readSidHexOrDec(id){
+  const el = document.getElementById(id);
+  if(!el) throw new Error(`缺少控件 #${id}`);
+  const s = (el.value||'').trim();
+  let n = /^0x/i.test(s) ? parseInt(s,16) : parseInt(s,10);
+  if (Number.isNaN(n)) n = 0;
+  n = clamp(n, R.sid.min, R.sid.max) & 0xFF;
+  el.value = String(n);
+  return n;
+}
+
+function packWriteVal(data_id, write_val_str){
+  if (write_val_str==='' || write_val_str==null) throw new Error('缺少写入值');
+  let v = parseInt(write_val_str, 10);
+  if (Number.isNaN(v)) v = 0;
+  if ([33,34,36,37,44,46,48,49].includes(data_id)) {
+    v = clamp(v, 0, 255);
+    return [v & 0xFF];
+  } else if ([38,39,40,41,42,43,50].includes(data_id)) {
+    v = clamp(v, 0, 65535);
+    return [v & 0xFF, (v >> 8) & 0xFF];
+  } else if ([51,52,53].includes(data_id)) {
+    v = clamp(v, -32768, 32767);
+    if (v < 0) v += 0x10000;
+    return [v & 0xFF, (v >> 8) & 0xFF];
+  } else {
+    throw new Error("未知 data_id");
+  }
+}
+
+function mkNumLabel(name, cls, range, value){
+  const stepAttr = (range.step!=null) ? ` step="${range.step}"` : '';
+  return `<label>${name} <input type="number" class="${cls}" min="${range.min}" max="${range.max}"${stepAttr} value="${value}"></label>`;
+}
+function readNum(root, sel, range){
+  const el = root.querySelector(sel);
+  if(!el) throw new Error(`缺少字段 ${sel}`);
+  let v = parseFloat(el.value);
+  if (Number.isNaN(v)) v = 0;
+  v = clamp(v, range.min, range.max);
+  el.value = (range.step===0.1) ? v.toFixed(1) : String(Math.round(v));
+  return v;
+}
+const U8 = v => [v&0xFF];
+const U16 = v => [v&0xFF,(v>>8)&0xFF];
+const S16 = v => U16((v<<16>>16));
+const U32 = v => [v&0xFF,(v>>8)&0xFF,(v>>16)&0xFF,(v>>24)&0xFF];
+function S32(v){ v = (v|0); return U32(v>>>0); }
+
+function angleDegToInt16_t_x10(deg){ return (Math.round(deg*10)<<16>>16); }
+function angleDegToInt32_t_x10(deg){ return Math.round(deg*10)|0; }
+
+function buildReq(cmd, content){
+  const hdr=[0x12,0x4C];
+  const len = content.length&0xFF;
+  const base=[...hdr, cmd&0xFF, len, ...content];
+  const ck=sum8(base)&0xFF;
+  return new Uint8Array([...base, ck]);
+}
+
+// ===== 快速检测与控制 =====
+const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+let quickScanActive = false;
+let quickScanAbort  = false;
+const quickOnline   = new Set();
+
+function beginQuickScanUI() {
+  const btnScan = document.getElementById('btnQuickScan');
+  const btnStop = document.getElementById('btnQuickStop');
+  const hint    = document.getElementById('quickHint');
+
+  if (btnStop) {
+    btnStop.textContent = t('btn_quick_stop');
+    btnStop.disabled = false;
+    btnStop.style.display = '';
+  }
+  if (btnScan) {
+    btnScan.dataset._oldText = t('btn_quick_scan');
+    btnScan.textContent = t('msg_scan_start');
+    btnScan.disabled = true;
+  }
+  if (hint) hint.textContent = t('msg_scan_hint');
+}
+
+function endQuickScanUI(ids, aborted) {
+  const btnScan = document.getElementById('btnQuickScan');
+  const btnStop = document.getElementById('btnQuickStop');
+  const hint    = document.getElementById('quickHint');
+
+  if (btnStop) {
+    btnStop.textContent = t('msg_stop_scan');
+    btnStop.disabled = true;
+    btnStop.style.display = 'none';
+  }
+  if (btnScan) {
+    const old = t('btn_quick_scan');
+    btnScan.textContent = old;
+    btnScan.disabled = false;
+  }
+  if (hint) {
+    const abTxt = aborted ? t('msg_aborted') : '';
+    hint.textContent = ids.length
+      ? `${t('msg_scan_found')}：${ids.join(', ')}${abTxt}`
+      : (aborted ? t('msg_scan_stopped') : t('msg_scan_none'));
+  }
+}
+
+(function hookPingCollect(){
+  window.__onPing = function(id){
+    if (quickScanActive) quickOnline.add(id & 0xFF);
+    const hint = document.getElementById('quickHint');
+    if (hint && quickScanActive) {
+      const ids = Array.from(quickOnline).sort((a,b)=>a-b);
+      hint.textContent = ids.length ? `${t('msg_scan_start')} ${t('msg_scan_found')}：${ids.join(', ')}` : t('msg_scan_start');
+    }
+  };
+})();
+
+document.getElementById('btnQuickScan')?.addEventListener('click', async ()=>{
+  if (quickScanActive) return;
+  quickOnline.clear();
+  quickScanActive = true;
+  quickScanAbort  = false;
+  beginQuickScanUI();
+
+  for (let id = 0; id <= 254; id++) {
+    if (quickScanAbort) break;
+    try {
+      const frame = buildReq(0x01, [id & 0xFF]);
+      if (typeof sendFrameAndLog === 'function') {
+        await sendFrameAndLog(frame);
+      } else {
+        const w = port.writable.getWriter();
+        await w.write(frame);
+        w.releaseLock();
+      }
+    } catch (_) { }
+    await sleep(20);
+  }
+  await sleep(300);
+  const ids = Array.from(quickOnline).sort((a,b)=>a-b);
+  quickScanActive = false;
+  endQuickScanUI(ids, quickScanAbort);
+  if (typeof renderQuickCheckboxes === 'function') {
+    renderQuickCheckboxes(ids);
+  }
+});
+
+document.getElementById('btnQuickStop')?.addEventListener('click', ()=>{
+  quickScanAbort = true;
+  const btnStop = document.getElementById('btnQuickStop');
+  if (btnStop) { btnStop.disabled = true; btnStop.textContent = t('msg_stopping'); }
+});
+
+function renderQuickCheckboxes(ids){
+  const wrap = document.getElementById('quickChkWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  ids.forEach(id=>{
+    const lab = document.createElement('label');
+    lab.className = 'servo';
+    lab.dataset.id = String(id);
+    lab.title = ` ${id}`;
+    lab.innerHTML = `<input type="checkbox" value="${id}"><span> ${id}</span>`;
+    wrap.appendChild(lab);
+    const inp = lab.querySelector('input');
+    lab.addEventListener('click', (e)=>{
+      requestAnimationFrame(()=>{
+        lab.classList.toggle('selected', inp.checked);
+        updateQuickMoveButtonState();
+      });
+    });
+  });
+  updateQuickMoveButtonState();
+}
+
+document.getElementById('btnQuickMove')?.addEventListener('click', async ()=>{
+  const ids = getSelectedIds();
+  if (!ids.length) { alert(t('msg_select_servo')); return; }
+  const subCmd   = 8;
+  const d        = 7;
+  const interval = 800;
+  const power    = 0;
+  const angPos   = angleDegToInt16_t_x10(30);
+  const angNeg   = angleDegToInt16_t_x10(-30);
+
+  const mkBlocks = (list, angRaw) => {
+    const out = [];
+    for (const sid of list) {
+      out.push(sid & 0xFF,...S16(angRaw),...U16(interval & 0xFFFF),...U16(power & 0xFFFF));
+    }
+    return out;
+  };
+  let frame = buildReq(0x19, [subCmd, d, ids.length, ...mkBlocks(ids, angPos)]);
+  await sendFrameAndLog(frame);
+  await (new Promise(r=>setTimeout(r, interval + 200)));
+  frame = buildReq(0x19, [subCmd, d, ids.length, ...mkBlocks(ids, angNeg)]);
+  await sendFrameAndLog(frame);
+});
+
+function updateQuickMoveButtonState(){
+  const wrap = document.getElementById('quickChkWrap');
+  const btn  = document.getElementById('btnQuickMove');
+  if (!wrap || !btn) return;
+  const any = wrap.querySelector('input[type="checkbox"]:checked');
+  btn.disabled = !any;
+}
+
+function getSelectedIds(){
+  const wrap = document.getElementById('quickChkWrap');
+  if (!wrap) return [];
+  return Array.from(wrap.querySelectorAll('input[type="checkbox"]:checked'))
+              .map(el => parseInt(el.value,10))
+              .filter(v => Number.isInteger(v));
+}
+
+// ===== 串口 =====
+let port=null, reader=null, writer=null, rxIdx=0, txIdx=0,monitorStartTime = null, monitorTimer = null, csvRows=[['timestamp','cmd','len','ok','decoded']];
+let readLoopAbort=false;
+let isAutoMonitoring = false; 
+
+async function choosePort(){
+  try{
+    port = await navigator.serial.requestPort({});
+    $('portInfo').innerText = t('msg_sel_port_info');
+  }catch(e){
+    $('portInfo').innerText = t('msg_not_connected') + ': '+e.message;
+  }
+}
+
+async function openPort(){
+  if(!port){ $('portInfo').innerText = t('msg_sel_port'); return; }
+  try{
+    await port.open({
+      baudRate: parseInt($('baud').value,10),
+      dataBits: parseInt($('databits').value,10),
+      stopBits: parseInt($('stopbits').value,10),
+      parity: $('parity').value,
+      flowControl: $('flow').value
+    });
+    writer = port.writable.getWriter();
+    $('portInfo').innerText = t('msg_opened') + ': '+JSON.stringify(port.getInfo?.()||{});
+    startReadLoop();
+  }catch(e){
+    $('portInfo').innerText = t('msg_open_fail') + ': '+e.message;
+  }
+}
+
+async function closePort(){
+  try{
+    readLoopAbort=true;
+    try{ await reader?.cancel(); }catch{}
+    try{ reader?.releaseLock(); }catch{}
+    try{ writer?.releaseLock(); }catch{}
+    reader=writer=null;
+    await port?.close();
+    $('portInfo').innerText = t('msg_disconnected');
+  }catch(e){
+    $('portInfo').innerText = t('msg_disconnect_fail') + ': '+e.message;
+  }
+}
+
+async function startReadLoop(){
+  if(!port?.readable) return;
+  readLoopAbort=false;
+  reader = port.readable.getReader();
+  let buf = new Uint8Array();
+
+  try{
+    while(!readLoopAbort){
+      const {value, done} = await reader.read();
+      if(done) break;
+      if(value?.length){
+        const tmp=new Uint8Array(buf.length+value.length);
+        tmp.set(buf,0); tmp.set(value,buf.length); buf=tmp;
+
+        let i=0;
+        while(i+5<=buf.length){
+          if(!(buf[i]===0x05 && buf[i+1]===0x1C)){ i++; continue; }
+          if(i+4>buf.length) break;
+
+          const cmd = buf[i+2];
+          const len = buf[i+3];
+          const need = i + 4 + len + 1;
+          if(need>buf.length) break;
+
+          const content = buf.slice(i+4, i+4+len);
+          const ck = buf[i+4+len];
+          const sum = buf.slice(i, i+4+len).reduce((a,b)=> (a+b)&0xFF, 0);
+          const ok = (sum === ck);
+
+          const filterRaw = val('idFilter','').trim();
+          let pass = true;
+          if(filterRaw){
+            const want = /^0x/i.test(filterRaw) ? parseInt(filterRaw,16) : parseInt(filterRaw,10);
+            pass = Number.isNaN(want) ? true : ((cmd & 0xFF) === (want & 0xFF));
+          }
+
+          if(pass){
+            if (cmd === 0x16) {
+              try { handleServoMonitor(content); } catch(e){ console.error('handleServoMonitor', e); }
+              if (isAutoMonitoring) { i = need; continue; }
+            }
+            rxIdx++;
+            const decoded = (typeof decodeResp === 'function')
+              ? (decodeResp(cmd, content) || '')
+              : Array.from(content).map(b=>toHex2(b)).join(' ');
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${rxIdx}</td>
+              <td>${nowHHMMSS()}</td>
+              <td class="id">0x${toHex2(cmd)}</td>
+              <td>${len}</td>
+              <td class="${ok ? 'ok' : 'err'}">${ok ? 'OK' : 'ERR'}</td>
+              <td class="mono">${decoded.replace(/\n/g,' ')}</td>
+            `;
+            const rxBody = $('rxBody');
+            if (rxBody) rxBody.prepend(tr);
+            const statEl = $('stat');
+            if (statEl) statEl.innerText = 'Rx: ' + rxIdx;
+          }
+          i = need;
+        }
+        if(i>0) buf = buf.slice(i);
+      }
+    }
+  }catch(e){
+    console.error('read loop error:', e);
+  }finally{
+    try{ reader.releaseLock(); }catch{}
+    reader = null;
+  }
+}
+
+function rdU16LE(b,off){ return b[off] | (b[off+1]<<8); }
+function rdS16LE(b,off){ let v=rdU16LE(b,off); if(v&0x8000) v = v-0x10000; return v; }
+function rdU32LE(b,off){ return (b[off]) | (b[off+1]<<8) | (b[off+2]<<16) | (b[off+3]<<24); }
+function rdS32LE(b,off){ let u=rdU32LE(b,off)>>>0; if(u>0x7FFFFFFF) return u-0x100000000; return u|0; }
+
+function decodeResp(cmd, c){
+  const lead = c.length? `servo_id=0x${toHex2(c[0])} (${c[0]})` : '';
+  switch(cmd){
+    case 0x01: 
+      if (typeof window.__onPing === 'function' && c && c.length) {
+        try { window.__onPing(c[0] & 0xFF); } catch(e){}
+      }
+      return `PING> ${lead}`;
+    case 0x03: return `READ_DATA> ${Array.from(c).map(b=>'0x'+toHex2(b)).join(' ')}`;
+    case 0x04: 
+    case 0x02: 
+    case 0x0B: 
+    case 0x0C: 
+    case 0x09: 
+    case 0x0D: 
+    case 0x0E: 
+    case 0x11: 
+    case 0x17: 
+    case 0x18: 
+      if(c.length>=2) return `resp> ${lead}, result=${c[1]}`;
+      return `resp> ${Array.from(c).map(b=>toHex2(b)).join(' ')}`;
+    case 0x0A: 
+      if(c.length>=3){
+        const a=rdS16LE(c,1);
+        return `ReadAngle> ${lead}, angle=${(a/10).toFixed(1)}° (raw=${a})`;
+      }
+      break;
+    case 0x10: 
+      if(c.length>=7){
+        const a=rdS32LE(c,1), t=rdS16LE(c,5);
+        return `ReadMultiTurn> ${lead}, angle=${(a/10).toFixed(1)}° (raw=${a}), turns=${t}`;
+      }
+      break;
+    case 0x16: 
+      if(c.length>=12){
+        const id=c[0];
+        const voltage=rdU16LE(c,1);
+        const current=rdU16LE(c,3);
+        const power=rdU16LE(c,5);
+        const temp=rdU16LE(c,7);
+        const status=c[9];
+        const angle=rdS32LE(c,10);
+        const turns=rdS16LE(c,14);
+        return `Monitor> id=${id}, U=${voltage}mV, I=${current}mA, P=${power}mW, T(ADC)=${temp}, status=${status}, angle=${(angle/10).toFixed(1)}°, turns=${turns}`;
+      }
+      break;
+  }
+  return Array.from(c).map(b=>toHex2(b)).join(' ');
+}
+
+async function sendFrameAndLog(frame,skipLog=false){
+  if(!writer){ alert(t('msg_sel_port')); return; }
+  await writer.write(frame);
+  const cmdId = frame[2];
+  if (cmdId === 0x16 && skipLog) return;
+  txIdx++;
+  const hex=Array.from(frame).map(b=>toHex2(b)).join(' ');
+  const tr=document.createElement('tr');
+  tr.innerHTML = `<td>${txIdx}</td><td>${nowHHMMSS()}</td><td class="id">${hex}</td>`;
+  $('txBody').prepend(tr);
+}
+
+function buildContentByCmd(cmd){
+  const g_id     = Math.round(readNumById('g_servo_id', R.sid)) & 0xFF;
+  let g_data = 0, g_wv_str = '';
+  if (cmd === 0x03 || cmd === 0x04) {
+    g_data   = clamp(parseInt(val('g_data_id','0'), 10) || 0, 0, 255) & 0xFF;
+  }
+  if (cmd === 0x04) {
+    g_wv_str = val('g_write_val','');
+  }
+
+  const s_id       = Math.round(readNumById('s_id', R.sid)) & 0xFF;
+  const s_angleDeg = readNumById('s_angle_deg', R.angle16);
+  const s_angleRaw = angleDegToInt16_t_x10(s_angleDeg);
+  const s_interval = Math.round(readNumById('s_interval', R.interval16)) & 0xFFFF;
+  const s_acc      = Math.round(readNumById('s_acc', R.acc)) & 0xFFFF;
+  const s_dec      = Math.round(readNumById('s_dec', R.dec)) & 0xFFFF;
+  const s_power    = Math.round(readNumById('s_power', R.power)) & 0xFFFF;
+  const s_vel10    = Math.round(readNumById('s_vel', R.vel) * 10) & 0xFFFF;
+
+  const d_id    = Math.round(readNumById('d_id', R.sid)) & 0xFF;
+  const d_power = Math.round(readNumById('d_power', R.power)) & 0xFFFF;
+
+  const m_id       = Math.round(readNumById('m_id', R.sid)) & 0xFF;
+  const m_angleDeg = readNumById('m_angle_deg', R.angle32);
+  const m_angleRaw = angleDegToInt32_t_x10(m_angleDeg);
+  const m_interval = Math.round(readNumById('m_interval32', R.interval32)) >>> 0;
+  const m_acc      = Math.round(readNumById('m_acc', R.acc)) & 0xFFFF;
+  const m_dec      = Math.round(readNumById('m_dec', R.dec)) & 0xFFFF;
+  const m_power    = Math.round(readNumById('m_power', R.power)) & 0xFFFF;
+  const m_vel10    = Math.round(readNumById('m_vel', R.vel) * 10) & 0xFFFF;
+
+  const mon_id = readSidHexOrDec('mon_id');
+  const org_id = Math.round(readNumById('org_id', R.sid)) & 0xFF;
+  const stp_id = Math.round(readNumById('stp_id', R.sid)) & 0xFF;
+  const method = parseInt(val('stp_method'), 10); // ✅
+
+
+  const stp_power  = Math.round(readNumById('stp_power', R.power)) & 0xFFFF;
+  const async_cancel = clamp(parseInt(document.getElementById('async_cancel').value, 10) || 0, 0, 1) & 0xFF;
+
+  switch(cmd){
+    case 0x01: return [g_id];
+    case 0x02: return [g_id];
+    case 0x03: return [g_id, g_data];
+    case 0x04: {
+      const valBuf = packWriteVal(g_data, g_wv_str);
+      return [g_id, g_data, ...valBuf];
+    }
+    case 0x08: return [s_id, ...S16(s_angleRaw), ...U16(s_interval), ...U16(s_power)];
+    case 0x0B: return [s_id, ...S16(s_angleRaw), ...U16(s_interval), ...U16(s_acc), ...U16(s_dec), ...U16(s_power)];
+    case 0x0C: return [s_id, ...S16(s_angleRaw), ...U16(s_vel10),   ...U16(s_acc), ...U16(s_dec), ...U16(s_power)];
+    case 0x0A: return [s_id];
+    case 0x09: return [d_id, ...U16(d_power)];
+    case 0x0D: return [m_id, ...S32(m_angleRaw), ...U32(m_interval), ...U16(m_power)];
+    case 0x0E: return [m_id, ...S32(m_angleRaw), ...U32(m_interval), ...U16(m_acc), ...U16(m_dec), ...U16(m_power)];
+    case 0x0F: return [m_id, ...S32(m_angleRaw), ...U16(m_vel10),   ...U16(m_acc), ...U16(m_dec), ...U16(m_power)];
+    case 0x10: return [m_id];
+    case 0x11: return [m_id];
+    case 0x12: return [];
+    case 0x13: return [async_cancel];
+    case 0x16: return [mon_id];
+    case 0x17: return [org_id, 0x00];
+    case 0x18: return [stp_id, method, ...U16(stp_power)];
+    default:
+      throw new Error('暂不支持的命令: 0x'+toHex2(cmd));
+  }
+}
+
+document.querySelectorAll('.btnCmd').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    const label=btn.textContent;
+    const hex = btn.getAttribute('data-cmd');
+    const cmd = parseInt(hex,16);
+    try{
+      const content = buildContentByCmd(cmd);
+      const frame = buildReq(cmd, content);
+      await sendFrameAndLog(frame);
+    }catch(e){
+      alert(label + ' ' + t('msg_build_fail') + '：'+e.message);
+    }
+  });
+});
+
+const syncCmdContainer = $('syncCmdContainer');
+const syncSelect = $('syncCmdSelect');
+let currentSyncCmd = parseInt(syncSelect.value, 10);  
+
+function getDefaultDef(cmd, id = 0){
+  const isMultiTurn = (cmd === 13 || cmd === 14 || cmd === 15);
+  return {
+    id,
+    angle: isMultiTurn ? 400.0 : 90.0,
+    interval: isMultiTurn ? 2000 : 500,
+    vel: 300,
+    acc: 100,
+    dec: 100,
+    power: 0
+  };
+}
+
+function loadSyncCmdUI(cmd){
+  currentSyncCmd = cmd|0;
+  syncCmdContainer.innerHTML = '';
+  syncCmdContainer.appendChild(makeSyncRow(cmd, getDefaultDef(cmd, 0)));
+  syncCmdContainer.appendChild(makeSyncRow(cmd, getDefaultDef(cmd, 1)));
+}
+syncSelect.onchange = () => loadSyncCmdUI(parseInt(syncSelect.value, 10));
+loadSyncCmdUI(currentSyncCmd);
+$('btnSyncAdd').onclick = () => {
+  const nextId = syncCmdContainer.children.length % 255;
+  syncCmdContainer.appendChild(makeSyncRow(currentSyncCmd, getDefaultDef(currentSyncCmd, nextId)));
+};
+
+function makeSyncRow(cmd, def={id:0, angle:90, interval:500, vel:300, acc:100, dec:100, power:0}){
+  const div = document.createElement('div');
+  div.className = 'row sync-row';
+
+  const isMulti = [13,14,15].includes(cmd);
+  const labelAngle = isMulti ? `angle(°)${currentLang==='zh'?'·多圈':''}` : 'angle(°)';
+
+  let html = mkNumLabel('servo_id','sid', R.sid, def.id);
+
+  if ([8,11,12].includes(cmd)){
+    html += mkNumLabel(labelAngle,'angle16', R.angle16, def.angle);
+  } else if (isMulti){
+    html += mkNumLabel(labelAngle,'angle32', R.angle32, def.angle);
+  }
+
+  if ([8,11].includes(cmd)){
+    html += mkNumLabel('interval(ms)','interval16', R.interval16, def.interval);
+  } else if ([13,14].includes(cmd)){
+    html += mkNumLabel('interval(ms)','interval32', R.interval32, def.interval);
+  }
+
+  if ([12,15].includes(cmd)){
+    html += mkNumLabel('velocity(°/s)','vel', R.vel, def.vel);
+  }
+
+  if ([11,12,14,15].includes(cmd)){
+    html += mkNumLabel('acc(ms)','acc', R.acc, def.acc);
+    html += mkNumLabel('dec(ms)','dec', R.dec, def.dec);
+  }
+
+  if ([8,11,12,13,14,15].includes(cmd)){
+    html += mkNumLabel('power(mW)','power', R.power, def.power);
+  }
+
+  html += `<button class="sync_del">${t('btn_del_row')}</button>`;
+  div.innerHTML = html;
+  div.querySelector('.sync_del').onclick = ()=>div.remove();
+
+  return div;
+}
+
+document.getElementById('btnSyncSend').onclick = async ()=>{
+  const rows = Array.from(document.getElementById('syncCmdContainer').children);
+  if (!rows.length) {
+    alert(t('msg_add_row'));
+    return;
+  }
+  const blocks = [];
+  try {
+    for (const r of rows){
+      const sid = Math.round(readNum(r,'.sid', R.sid)) & 0xFF;
+      if ([8,11,12].includes(currentSyncCmd)){
+        const angDeg = readNum(r,'.angle16', R.angle16);
+        const ang16  = angleDegToInt16_t_x10(angDeg);
+        if (currentSyncCmd===8){
+          const itv = Math.round(readNum(r,'.interval16', R.interval16)) & 0xFFFF;
+          const pwr = Math.round(readNum(r,'.power', R.power)) & 0xFFFF;
+          blocks.push(...[sid, ...S16(ang16), ...U16(itv), ...U16(pwr)]);
+        }
+        else if (currentSyncCmd===11){
+          const itv = Math.round(readNum(r,'.interval16', R.interval16)) & 0xFFFF;
+          const acc = Math.round(readNum(r,'.acc', R.acc)) & 0xFFFF;
+          const dec = Math.round(readNum(r,'.dec', R.dec)) & 0xFFFF;
+          const pwr = Math.round(readNum(r,'.power', R.power)) & 0xFFFF;
+          blocks.push(...[sid,...S16(ang16),...U16(itv),...U16(acc),...U16(dec),...U16(pwr)]);
+        }
+        else if (currentSyncCmd===12){
+          const velRaw = Math.round(readNum(r,'.vel', R.vel) * 10) & 0xFFFF;
+          const acc = Math.round(readNum(r,'.acc', R.acc)) & 0xFFFF;
+          const dec = Math.round(readNum(r,'.dec', R.dec)) & 0xFFFF;
+          const pwr = Math.round(readNum(r,'.power', R.power)) & 0xFFFF;
+          blocks.push(...[sid,...S16(ang16),...U16(velRaw),...U16(acc),...U16(dec),...U16(pwr)]);
+        }
+      }
+      else if ([13,14,15].includes(currentSyncCmd)){
+        const angDeg = readNum(r,'.angle32', R.angle32);
+        const ang32  = angleDegToInt32_t_x10(angDeg);
+        if (currentSyncCmd===13){
+          const itv32 = Math.round(readNum(r,'.interval32', R.interval32)) >>> 0;
+          const pwr   = Math.round(readNum(r,'.power', R.power)) & 0xFFFF;
+          blocks.push(...[sid,...S32(ang32),...U32(itv32),...U16(pwr)]);
+        }
+        else if (currentSyncCmd===14){
+          const itv32 = Math.round(readNum(r,'.interval32', R.interval32)) >>> 0;
+          const acc   = Math.round(readNum(r,'.acc', R.acc)) & 0xFFFF;
+          const dec   = Math.round(readNum(r,'.dec', R.dec)) & 0xFFFF;
+          const pwr   = Math.round(readNum(r,'.power', R.power)) & 0xFFFF;
+          blocks.push(...[sid,...S32(ang32),...U32(itv32),...U16(acc),...U16(dec),...U16(pwr)]);
+        }
+        else if (currentSyncCmd===15){
+          const velRaw = Math.round(readNum(r,'.vel', R.vel) * 10) & 0xFFFF;
+          const acc    = Math.round(readNum(r,'.acc', R.acc)) & 0xFFFF;
+          const dec    = Math.round(readNum(r,'.dec', R.dec)) & 0xFFFF;
+          const pwr    = Math.round(readNum(r,'.power', R.power)) & 0xFFFF;
+          blocks.push(...[sid,...S32(ang32),...U16(velRaw),...U16(acc),...U16(dec),...U16(pwr)]);
+        }
+      }
+      else if (currentSyncCmd===22){
+        blocks.push(sid);
+      }
+    }
+    const dMap = {8:7,11:11,12:11,13:11,14:15,15:13,22:1};
+    const d = dMap[currentSyncCmd] || 7;
+    const n = rows.length;
+    const frame = buildReq(0x19,[currentSyncCmd,d,n,...blocks]);
+    await sendFrameAndLog(frame);
+  } catch(e) {
+    alert(t('msg_build_fail') + '：' + e.message);
+  }
+};
+
+$('btnSendRaw').onclick=async ()=>{
+  try{
+    const bs = parseHexBytes($('rawHex').value);
+    if(!bs.length) throw new Error(t('msg_input_hex'));
+    await sendFrameAndLog(new Uint8Array(bs));
+    $('rawInfo').innerText=t('msg_sent');
+    setTimeout(()=>$('rawInfo').innerText='',1200);
+  }catch(e){
+    $('rawInfo').innerText='Error: '+e.message;
+  }
+};
+
+$('btnExportCsv').onclick = () => {
+  let csv = "==== Tx Record ====\n";
+  csv += "Seq,Time,Frame HEX\n";
+  document.querySelectorAll('#txBody tr').forEach(tr=>{
+    const cols = tr.querySelectorAll('td');
+    const row = Array.from(cols).map(td=>td.innerText.trim()).join(',');
+    csv += row + "\n";
+  });
+
+  csv += "\n==== Rx Record ====\n";
+  csv += "Seq,Time,CMD,Len,Checksum,Content\n";
+  document.querySelectorAll('#rxBody tr').forEach(tr=>{
+    const cols = tr.querySelectorAll('td');
+    const row = Array.from(cols).map(td=>td.innerText.trim()).join(',');
+    csv += row + "\n";
+  });
+
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'TxRx_Records.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+$('btnClearRx').onclick=()=>{ $('rxBody').innerHTML=''; rxIdx=0; csvRows=[['timestamp','cmd','len','ok','decoded']]; $('stat').innerText=''; };
+$('btnClearTx').onclick=()=>{ $('txBody').innerHTML=''; txIdx=0; };
+
+$('btnChoose').onclick = choosePort;
+$('btnOpen').onclick = openPort;
+$('btnClose').onclick = closePort;
+
+document.addEventListener('keydown', (ev)=>{
+  if(ev.key==='Enter' && (ev.ctrlKey || ev.metaKey)){
+    $('btnSendRaw').click();
+  }
+});
+
+const chartData = {
+  labels: [], 
+  datasets: [
+    {label: t('chart_current'), data: [], borderColor: '#1A73E8', borderWidth:1.5, fill:false},
+    {label: t('chart_voltage'), data: [], borderColor: '#EA4335', borderWidth:1.5, fill:false},
+    {label: t('chart_power'), data: [], borderColor: '#FBBC05', borderWidth:1.5, fill:false},
+    {label: t('chart_temp'), data: [], borderColor: '#34A853', borderWidth:1.5, fill:false}
+  ]
+};
+
+const ctx = document.getElementById('monitorChart').getContext('2d');
+// ===== 关键修正：将 chart 实例挂载到 window =====
+window.monitorChart = new Chart(ctx, {
+  type: 'line',
+  data: chartData,
+  options: {
+    responsive: true,
+    animation: false,
+    maintainAspectRatio: false,  
+    scales: {
+      x: { title: { display: true, text: 'Time (s)' }},
+      y: { title: { display: true, text: 'V / A / W / °C' }}
+    },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(3)}`
+        }
+      }
+    }
+  }
+});
+
+function adcToCelsius(adcVal) {
+  const R = 10000 * adcVal / (4096 - adcVal);
+  const T = 1 / (Math.log(R / 10000) / 3435 + 1 / (273.15 + 25)) - 273.15;
+  return T;
+}
+
+function handleServoMonitor(content) {
+  const voltage_mV = content[1] | (content[2] << 8);
+  const current_mA = content[3] | (content[4] << 8);
+  const power_mW   = content[5] | (content[6] << 8);
+  const tempADC    = content[7] | (content[8] << 8);
+  const voltage_V = voltage_mV / 1000;
+  const current_A = current_mA / 1000;
+  const power_W   = power_mW   / 1000;
+  const tempC   = adcToCelsius(tempADC);
+  if (monitorStartTime === null) monitorStartTime = Date.now();
+  const t = ((Date.now() - monitorStartTime)/1000).toFixed(2); 
+
+  chartData.labels.push(t);
+  chartData.datasets[0].data.push(current_A);
+  chartData.datasets[1].data.push(voltage_V);
+  chartData.datasets[2].data.push(power_W);
+  chartData.datasets[3].data.push(tempC);
+
+  if (chartData.labels.length > 300) {
+    chartData.labels.shift();
+    chartData.datasets.forEach(ds => ds.data.shift());
+  }
+  window.monitorChart.update();
+}
+
+let monitorInterval = 33; 
+$("btnStartMonitor").addEventListener("click", ()=>{
+  if (monitorTimer) return;
+  isAutoMonitoring = true;  
+  monitorStartTime = Date.now(); 
+  chartData.labels = [];
+  chartData.datasets.forEach(ds => ds.data = []);
+  window.monitorChart.update();
+  const hz = parseFloat($("monitorFreq").value);
+  monitorInterval = 1000 / hz;  
+  monitorTimer = setInterval(async ()=>{
+    const sid = parseInt(($("mon_id")?.value || $("org_id")?.value || 0), 10) & 0xFF;
+    const frame = buildReq(0x16, [sid]);
+    await sendFrameAndLog(frame, true); 
+  }, monitorInterval);
+});
+
+$("btnStopMonitor").addEventListener("click", ()=>{
+  if (monitorTimer) {
+    clearInterval(monitorTimer);
+    monitorTimer = null;
+    isAutoMonitoring = false;   
+  }
+});
+</script>
+</body>
+</html>

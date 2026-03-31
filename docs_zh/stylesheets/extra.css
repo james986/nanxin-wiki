@@ -1,0 +1,1140 @@
+/*
+==========================================================================
+Nanxinwei Wiki - V47.9
+==========================================================================
+- Design System: Variable-driven vertical rhythm (VS Code Inspired).
+- Header Strategy: H1 individual logic; H2-H4 unified (Top 1.5, Bottom 0.5).
+- Content Flow: Paragraphs locked at Bottom 0.5rem for high info density.
+- Nav Specs: Left sidebar 16px; Right TOC 14px.
+- Border Spec: 0.5px ultra-fine borders for tables and dividers.
+==========================================================================
+*/
+
+/* 0. Font Strategy - 系统字体优先 */
+
+/* 1. Core Variables - 中央调度站 */
+:root {
+  /* 品牌色 */
+  --fs-accent: #8641A9;
+  --fs-divider: rgba(0,0,0,0.15); 
+  --fs-table-header-bg: #F8F9FA; 
+
+  /* 字体栈：系统字体优先，接近 Wikipedia 的策略 */
+  --md-text-font: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                  "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+                  "Noto Sans CJK SC", sans-serif;
+  --md-code-font: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  
+  /* 文字颜色定义 (浅色模式) */
+  --fs-content-fg: #333333;           
+  --fs-header-fg: #242424;            /* H1-H4 专用深色 */
+  --fs-nav-inactive: var(--fs-content-fg); 
+
+  /* 正文超链接（参考维基百科浅色方案） */
+  --fs-link-unvisited: #4B5FD1;
+  --fs-link-visited: #4B5FD1;
+  --fs-link-hover: #8641A9;
+  --fs-link-active: #5D2F79;
+
+  /* Material Design 3 基础色彩覆盖 */
+  --md-primary-fg-color: var(--fs-accent);
+  --md-accent-fg-color: var(--fs-accent);
+  --md-default-fg-color: var(--fs-content-fg);
+
+  /* 垂直节奏刻度尺 */
+  --fs-space-zero: 0;            
+  --fs-space-small: 0.5rem;      
+  --fs-space-base: 1.0rem;       
+  --fs-space-medium: 1.5rem;     
+  --fs-space-large: 2.0rem;      
+}
+
+/* 让示例代码块使用正文字体（仅对包裹在 .fs-body-code 内的代码生效） */
+.fs-body-code pre,
+.fs-body-code pre code {
+  font-family: var(--md-text-font) !important;
+  font-size: 1em !important;
+}
+
+[data-md-color-scheme="slate"] {
+  --fs-divider: rgba(255,255,255,0.15);
+  --fs-table-header-bg: #202124;
+  --md-default-bg-color: #181818;
+  --md-default-bg-color--light: #1e1f20;
+  
+  /* 文字颜色定义 (深色模式) */
+  --fs-content-fg: #CCCCCC;      
+  --fs-header-fg: #F1F1F1;            /* H1-H4 专用浅色 */
+  --fs-nav-inactive: var(--fs-content-fg); 
+  /* 正文超链接（参考维基百科深色方案） */
+  --fs-link-unvisited: #88A3E8;
+  --fs-link-visited: #88A3E8;
+  --fs-link-hover: var(--fs-accent);
+  --fs-link-active: #353262;
+  --md-default-fg-color: var(--fs-content-fg);
+}
+
+/* 1.1 正文超链接颜色（仅正文区域，避免影响 footer/social） */
+.md-content .md-typeset a {
+  color: var(--fs-link-unvisited) !important;
+  text-decoration: none;
+}
+
+.md-content .md-typeset a:visited {
+  color: var(--fs-link-unvisited) !important;
+}
+
+.md-content .md-typeset a:hover,
+.md-content .md-typeset a:focus {
+  color: var(--fs-link-hover) !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md-content .md-typeset a:active {
+  color: var(--fs-link-active) !important;
+}
+
+.md-content .md-typeset a code {
+  color: inherit !important;
+}
+
+.md-content .md-typeset a.md-button,
+.md-content .md-typeset a.fs-download-btn,
+.md-content .md-typeset a.md-button:hover,
+.md-content .md-typeset a.fs-download-btn:hover {
+  text-decoration: none !important;
+}
+
+/* 1.2 字体渲染：覆盖 Material 默认 antialiased，避免 Mac 上发细 */
+body,
+.md-typeset,
+.md-nav,
+.md-header,
+.md-footer {
+  -webkit-font-smoothing: subpixel-antialiased !important;
+  -moz-osx-font-smoothing: auto !important;
+}
+
+/* 2. Component Cleanup */
+.md-logo, [class*="md-logo"], .md-header__button.md-logo { display: none !important; }
+.md-header__source, .md-nav__source, [data-md-component="source"] { display: none !important; }
+.md-header__title { margin-left: 0 !important; }
+.md-header__ellipsis { padding-left: 0.5rem !important; }
+
+/* 隐藏页脚导航 */
+.md-footer-nav, .md-footer__nav,
+nav.md-footer__inner[aria-label="Footer"],
+nav.md-footer__inner[aria-label="页脚"] {
+  display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; border: none !important;
+}
+
+/* 页脚社交图标：与 copyright 文本保持同色 */
+.md-footer-meta .md-social__link,
+.md-footer-meta .md-social__link:visited,
+.md-footer-meta .md-social__link:hover,
+.md-footer-meta .md-social__link:focus,
+.md-footer-meta .md-social__link:active {
+  color: var(--md-footer-fg-color--light) !important;
+}
+
+/* 3. Scrollbar Aesthetics */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background-color: var(--fs-divider); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--fs-accent); }
+
+/* 桌面端防抖：页面高度变化时保留滚动条槽位，避免点击目录时整体横向抖动 */
+@media screen and (min-width: 60em) {
+  html {
+    scrollbar-gutter: stable both-edges;
+    overflow-y: scroll !important;
+  }
+  body {
+    overflow-y: visible !important;
+  }
+}
+
+/* 桌面端布局稳定：TOC 为空页也保留右侧栏占位，避免页面标题横向跳动 */
+@media screen and (min-width: 76.25em) {
+  /* 固定左右侧栏宽度，避免切页时主内容横向重排 */
+  .md-sidebar--primary {
+    width: 12.1rem !important;
+    min-width: 12.1rem !important;
+    flex: 0 0 12.1rem !important;
+  }
+  .md-sidebar--secondary {
+    display: block !important;
+    width: 12.1rem !important;
+    min-width: 12.1rem !important;
+    flex: 0 0 12.1rem !important;
+  }
+
+  .md-sidebar--secondary[hidden] {
+    display: block !important;
+    visibility: hidden !important;
+  }
+
+  /* 空 TOC 页面保留栏位，但不显示目录内容 */
+  .md-sidebar--secondary nav.md-nav--secondary:not(:has(ul[data-md-component="toc"])) {
+    visibility: hidden !important;
+  }
+
+  /* 空 TOC 与有 TOC 页面保持相同内容宽度，避免页面进入后出现右移/回弹 */
+  [dir="ltr"] .md-sidebar--secondary ~ .md-content > .md-content__inner {
+    margin-right: 1.2rem !important;
+  }
+  [dir="rtl"] .md-sidebar--secondary ~ .md-content > .md-content__inner {
+    margin-left: 1.2rem !important;
+  }
+
+  /* 主导航栏也固定保留内容侧边距，避免切页瞬间出现左侧边距切换 */
+  [dir="ltr"] .md-sidebar--primary ~ .md-content > .md-content__inner {
+    margin-left: 1.2rem !important;
+  }
+  [dir="rtl"] .md-sidebar--primary ~ .md-content > .md-content__inner {
+    margin-right: 1.2rem !important;
+  }
+}
+
+/* 4. 左侧侧边栏 (Navigation) */
+
+/* [A] 基础字号与颜色 */
+.md-nav__link, .md-nav__title {
+  color: var(--fs-nav-inactive);
+  transition: color 125ms, font-weight 125ms;
+}
+
+/* 顶级目录与嵌套目录 16px */
+.md-nav__title,
+.md-nav__item--nested > .md-nav__link,
+.md-nav__item--nested > label.md-nav__link {
+  font-size: 16px !important;
+}
+
+/* 特殊：顶级 Home 锁定 16px */
+nav[data-md-level="0"] > .md-nav__list > .md-nav__item:first-child > .md-nav__link {
+  font-size: 16px !important;
+}
+
+/* 普通文章 16px */
+.md-nav__item:not(.md-nav__item--nested) > .md-nav__link {
+  font-size: 16px !important;
+}
+
+/* [B] 选中状态与 2.5px 竖线 */
+li.md-nav__item--active > .md-nav__link,
+li.md-nav__item--active > label.md-nav__link {
+  color: var(--fs-accent) !important;
+  font-weight: 600 !important;
+  position: relative;
+}
+
+/* navigation.indexes 容器结构：激活项中的标题链接也要用品牌色 */
+li.md-nav__item--active > .md-nav__container > a.md-nav__link,
+li.md-nav__item--active > .md-nav__container > label.md-nav__link {
+  color: var(--fs-accent) !important;
+  font-weight: 600 !important;
+}
+
+li.md-nav__item--active > .md-nav__link::after,
+li.md-nav__item--active > label.md-nav__link::after {
+  content: "";
+  position: absolute;
+  left: -12px; top: 0; bottom: 0;
+  width: 2.5px;
+  background-color: var(--fs-accent);
+  display: block !important;
+}
+
+/* [C] 屏蔽逻辑 (Home & Section) */
+/* 屏蔽顶级 Home 竖线 */
+nav[data-md-level="0"] > .md-nav__list > .md-nav__item:first-child > .md-nav__link::after {
+  display: none !important;
+}
+
+/* 强制屏蔽 Section 标题及一切非内容项的竖线 */
+.md-nav__item--section > .md-nav__link::after,
+.md-nav__item--section > label::after,
+.md-nav__item--section > .md-nav__link--active::after,
+.md-nav__title::after,
+[for="__drawer"]::after {
+  display: none !important;
+  content: none !important;
+  width: 0 !important;
+}
+
+/* current-only 分组：仅显示当前选中项（索引页不显示任何子项） */
+.md-sidebar--primary .md-nav__item--nested:has(> .md-nav > .md-nav__list > .md-nav__item > .md-nav__link[href*="current-only"]) > .md-nav > .md-nav__list > .md-nav__item {
+  display: none !important;
+}
+.md-sidebar--primary .md-nav__item--nested:has(> .md-nav > .md-nav__list > .md-nav__item > .md-nav__link[href*="current-only"]) > .md-nav > .md-nav__list > .md-nav__item.md-nav__item--active {
+  display: list-item !important;
+}
+/* current-only 锚点本身永远隐藏（避免误点后出现） */
+.md-sidebar--primary .md-nav__item--nested > .md-nav > .md-nav__list > .md-nav__item:has(> .md-nav__link[href*="current-only"]) {
+  display: none !important;
+}
+/* current-only 分组：隐藏右侧展开箭头，避免用户误以为可展开列表 */
+.md-sidebar--primary .md-nav__item--nested:has(> .md-nav > .md-nav__list > .md-nav__item > .md-nav__link[href*="current-only"]) > .md-nav__container > label.md-nav__link,
+.md-sidebar--primary .md-nav__item--nested:has(> .md-nav > .md-nav__list > .md-nav__item > .md-nav__link[href*="current-only"]) > .md-nav__container .md-nav__icon {
+  display: none !important;
+}
+
+/* 左侧导航展开箭头：增强可见性（略大、略深） */
+.md-sidebar--primary .md-nav__icon {
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+  opacity: 0.95 !important;
+}
+
+/* 左侧导航防抖：禁用主导航的展开/颜色过渡，避免点击目录时视觉抖动 */
+.md-sidebar--primary .md-nav__item--nested > .md-nav,
+.md-sidebar--primary .md-nav__item > .md-nav__link,
+.md-sidebar--primary .md-nav__item > .md-nav__container > a.md-nav__link,
+.md-sidebar--primary .md-nav__item > .md-nav__container > label.md-nav__link,
+.md-sidebar--primary .md-nav__icon {
+  transition: none !important;
+}
+.md-sidebar--primary .md-nav {
+  transition: none !important;
+}
+
+/* PC 端：分组标题保持黑色（关闭 navigation.indexes 后不变色） */
+@media (min-width: 60em) {
+  .md-sidebar--primary .md-nav__item--section > .md-nav__link,
+  .md-sidebar--primary .md-nav__item--section > .md-nav__link--active,
+  .md-sidebar--primary .md-nav__item--section > label.md-nav__link,
+  .md-sidebar--primary .md-nav__item--section > label.md-nav__link--active,
+  .md-sidebar--primary .md-nav__item--section > .md-nav__container > a.md-nav__link,
+  .md-sidebar--primary .md-nav__item--section > .md-nav__container > a.md-nav__link--active,
+  .md-sidebar--primary .md-nav__item--section > .md-nav__container > label.md-nav__link,
+  .md-sidebar--primary .md-nav__item--section > .md-nav__container > label.md-nav__link--active {
+    color: var(--fs-header-fg) !important;
+    opacity: 1 !important;
+  }
+}
+
+/* 5. Right Sidebar (TOC) - 14.5px */
+.md-sidebar--secondary .md-nav__title[for="__toc"] {
+  font-size: 0 !important; 
+  color: transparent !important; 
+  margin-bottom: 0.8rem !important; 
+  display: block !important;       
+  height: auto !important;          
+}
+
+.md-sidebar--secondary .md-nav__title[for="__toc"]::after {
+  font-size: 12.8px !important; 
+  font-weight: 600 !important;
+  color: var(--fs-header-fg) !important; 
+  display: block !important;
+  height: auto !important;          
+  line-height: 1.2 !important;
+  white-space: nowrap !important;   
+  text-transform: none !important;  
+}
+
+/* 重新注入内容 */
+[lang="en"] .md-sidebar--secondary .md-nav__title[for="__toc"]::after { content: "On this page" !important; }
+[lang="zh"] .md-sidebar--secondary .md-nav__title[for="__toc"]::after { content: "本页目录" !important; }
+
+/* 关键修复：通过 nav.md-nav--secondary 强力锁定右侧目录字号 */
+.md-sidebar--secondary nav.md-nav--secondary .md-nav__link { 
+  padding: 0.15rem 0 !important; 
+  margin: 0 !important;
+  line-height: 1.5 !important; 
+  font-size: 14px !important;      /* 强制回退到 14px */
+  color: var(--fs-content-fg) !important;
+  opacity: 1 !important; 
+}
+
+/* 激活态 */
+.md-sidebar--secondary nav.md-nav--secondary .md-nav__link--active { 
+  font-weight: 600 !important; 
+  color: var(--fs-accent) !important; 
+}
+
+/* 悬停态 */
+.md-sidebar--secondary nav.md-nav--secondary .md-nav__link:hover {
+  color: var(--fs-accent) !important;
+}
+
+/* 彻底屏蔽 TOC 内部可能产生的任何竖线或装饰 */
+.md-sidebar--secondary nav.md-nav--secondary .md-nav__link::after { 
+  display: none !important; 
+  content: none !important;
+}
+
+/* 6. Content Typography - 核心垂直节奏控制 */
+.md-typeset { 
+  color: var(--fs-content-fg);
+  line-height: 1.6;
+}
+
+/* --- 全局加粗统一 --- */
+.md-typeset strong, 
+.md-typeset b {
+  font-weight: 600 !important; 
+}
+
+/* 统一 H2-H4: 上 1.5rem (24px) / 下 0.5rem (8px) */
+.md-typeset h2, 
+.md-typeset h3, 
+.md-typeset h4 {
+  font-weight: 600 !important;
+  color: var(--fs-header-fg) !important; 
+  margin-top: var(--fs-space-medium) !important;
+  margin-bottom: var(--fs-space-small) !important;
+}
+
+/* H1 单独处理：顶部归零，底部 1.5rem (24px) */
+.md-typeset h1 {
+  font-weight: 600 !important;
+  color: var(--fs-header-fg) !important; 
+  margin-top: var(--fs-space-zero) !important;
+  margin-bottom: var(--fs-space-medium) !important;
+}
+
+/* 正文段落: 上 0 / 下 0.5rem (8px) */
+.md-typeset p {
+  margin-top: var(--fs-space-zero) !important;
+  margin-bottom: var(--fs-space-small) !important;
+}
+
+/* [核心修正] 列表间距：基础缩进 1.2rem */
+.md-typeset ul, 
+.md-typeset ol {
+  margin-top: var(--fs-space-zero) !important;
+  margin-bottom: var(--fs-space-small) !important;
+  padding-left: 1.2rem !important; 
+}
+
+/* [核心修正] 特别针对 Tip/Note 等提示框内的列表进行缩进优化 */
+.md-typeset .admonition ul, 
+.md-typeset .admonition ol {
+  margin-left: 0 !important;
+  padding-left: 1.8em !important; /* 强制消除 Tip 容器导致的多余空白 */
+}
+
+/* 列表项内部微调 */
+.md-typeset li {
+  margin-bottom: 0.1rem !important;
+}
+
+/* [核心修正] 提升 Tip 内列表的条目间距，增加专业感 */
+.md-typeset .admonition li {
+  margin-bottom: 4px !important; 
+}
+
+.md-typeset li p {
+  margin-bottom: 0 !important; 
+}
+
+/* 处理文章开头第一个标题的顶距 */
+.md-typeset h1:first-child,
+.md-typeset h2:first-child {
+  margin-top: 0 !important;
+}
+
+/* 7. Image Optimization - 全局图片相框化 (V52.6 响应式完全适配版) */
+
+/* [A] 全局普通图片：基础样式 (排除表格和代码框内的图片) */
+.md-typeset img:not(td img):not(pre img) { 
+  display: block !important; 
+  margin: var(--fs-space-base) auto !important; 
+  
+  /* 桌面端保持精致留白感 */
+  width: 85% !important;
+  max-width: 85% !important;
+  
+  /* 无边框/无阴影 */
+  background-color: transparent !important;
+  padding: 5px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+  transition: all 0.25s ease;
+  cursor: zoom-in;
+}
+
+/* [B] 悬停态：浅色模式品牌色，深色模式标题色 */
+.md-typeset img:not(td img):not(pre img):hover {
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: zoom-in;
+}
+
+/* --- 深色模式适配 --- */
+[data-md-color-scheme="slate"] .md-typeset img:not(td img):not(pre img) {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[data-md-color-scheme="slate"] .md-typeset img:not(td img):not(pre img):hover {
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* --- [关键修正] 移动端/iPad 响应式增强：强制 100% 全宽 --- */
+@media screen and (max-width: 1024px) {
+  .md-typeset img:not(td img):not(pre img) {
+    /* 必须加 !important 以覆盖桌面端的 85% */
+    width: 100% !important; 
+    max-width: 100% !important;
+    margin: var(--fs-space-small) auto !important; 
+    padding: 5px !important; /* 缩小内衬增加可视面积 */
+  }
+}
+
+/* [C] 特殊修复：屏蔽徽章、国旗、头像装饰 (追加 width: auto 以防被拉伸) */
+.md-typeset img[src*="shields.io"],
+.md-typeset img.flag-icon,
+.md-typeset .fs-avatar {
+  display: inline-block !important;
+  margin: 0 4px !important;
+  max-width: none !important;
+  width: auto !important; /* 确保小图标不继承 85%/100% 的宽度 */
+  padding: 0 !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  vertical-align: middle;
+}
+
+/* 头像保持圆形 */
+.md-typeset .fs-avatar { border-radius: 50% !important; }
+
+/* [D] 兼容性补丁 */
+.md-typeset h1 + p { text-align: left !important; }
+
+/* 8. Table Optimization (V47.3 精准间距优化版) */
+.md-typeset__table { 
+  margin-top: var(--fs-space-zero) !important;      
+  margin-bottom: var(--fs-space-small) !important;   
+  display: block !important;
+  width: 100% !important;
+  overflow-x: auto; 
+}
+
+/* iOS glightbox 关闭按钮可见性修正（仅中文站点） */
+.glightbox-container .gclose {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  z-index: 10001;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: auto !important;
+  width: 32px !important;
+  height: 32px !important;
+  background: rgba(0, 0, 0, 0.55) !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+}
+
+.glightbox-container {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.md-typeset table:not([class]) {
+  width: 100% !important; 
+  display: table !important; 
+  border-collapse: collapse !important;
+  border: 0.5px solid var(--fs-divider) !important;
+  font-size: 14px !important;
+}
+
+.md-typeset table:not([class]) th, 
+.md-typeset table:not([class]) td {
+  padding: 10px 16px !important; 
+  border: 0.5px solid var(--fs-divider) !important;
+  line-height: 1.4 !important;
+  vertical-align: middle !important;
+}
+
+/* --- [修正] 表格内列表默认外边距导致的上下不均衡 --- */
+.md-typeset table:not([class]) ul {
+  margin: 0 !important;
+  padding-left: 1.2em !important;
+}
+.md-typeset table:not([class]) li {
+  margin: 0 !important;
+}
+
+/* --- [修正] 针对含有图片的单元格，减小内边距 --- */
+.md-typeset table:not([class]) td:has(img) {
+  padding: 5px !important; /* 将默认的 10px/16px 大幅缩小 */
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--fs-table-header-bg) !important;
+  font-weight: 600 !important;
+  border-bottom: 0.5px solid var(--fs-divider) !important;
+  text-align: center !important;
+}
+
+/* CAD 下载页专用表格：与全站表格细线规则保持一致 */
+.md-typeset table.cad-files-table {
+  width: 100% !important;
+  display: table !important;
+  border-collapse: collapse !important;
+  border: 0.5px solid var(--fs-divider) !important;
+  font-size: 14px !important;
+}
+
+.md-typeset table.cad-files-table th,
+.md-typeset table.cad-files-table td {
+  padding: 10px 16px !important;
+  border: 0.5px solid var(--fs-divider) !important;
+  line-height: 1.4 !important;
+  vertical-align: middle !important;
+}
+
+.md-typeset table.cad-files-table th {
+  background-color: var(--fs-table-header-bg) !important;
+  font-weight: 600 !important;
+  border-bottom: 0.5px solid var(--fs-divider) !important;
+  text-align: center !important;
+}
+
+.md-typeset table.cad-files-table tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.012) !important;
+}
+[data-md-color-scheme="slate"] .md-typeset table.cad-files-table tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* --- [iOS Safari] 0.5px 边框可能不显示：用阴影补线 --- */
+@supports (-webkit-touch-callout: none) {
+  .md-typeset table:not([class]),
+  .md-typeset table.cad-files-table {
+    border: none !important;
+    box-shadow:
+      inset 0.5px 0 0 var(--fs-divider),
+      inset 0 0.5px 0 var(--fs-divider);
+  }
+
+  .md-typeset table:not([class]) th,
+  .md-typeset table:not([class]) td,
+  .md-typeset table.cad-files-table th,
+  .md-typeset table.cad-files-table td {
+    border: none !important;
+    position: relative;
+    box-shadow:
+      inset -0.5px 0 0 var(--fs-divider),
+      inset 0 -0.5px 0 var(--fs-divider);
+  }
+
+  /* iOS：补齐表头顶部与左右外框 */
+  .md-typeset table:not([class]) thead th,
+  .md-typeset table:not([class]) thead td,
+  .md-typeset table.cad-files-table thead th,
+  .md-typeset table.cad-files-table thead td {
+    box-shadow:
+      inset -0.5px 0 0 var(--fs-divider),
+      inset 0 -0.5px 0 var(--fs-divider),
+      inset 0 0.5px 0 var(--fs-divider);
+  }
+
+  .md-typeset table:not([class]) thead tr > th:first-child,
+  .md-typeset table:not([class]) thead tr > td:first-child,
+  .md-typeset table.cad-files-table thead tr > th:first-child,
+  .md-typeset table.cad-files-table thead tr > td:first-child {
+    box-shadow:
+      inset -0.5px 0 0 var(--fs-divider),
+      inset 0 -0.5px 0 var(--fs-divider),
+      inset 0 0.5px 0 var(--fs-divider),
+      inset 0.5px 0 0 var(--fs-divider);
+  }
+
+  .md-typeset table:not([class]) th,
+  .md-typeset table.cad-files-table th {
+    border-bottom: none !important;
+  }
+}
+
+/* --- [修正] 优化表格内图片的尺寸逻辑 --- */
+.md-typeset table:not([class]) td img {
+  display: inline-block !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 2px !important;
+  
+  /* 响应式高度：桌面端适当放大，移动端保持紧凑 */
+  max-height: 120px !important; /* 桌面端从 85px 提升至 120px */
+  width: auto !important;
+  object-fit: contain !important;
+}
+
+/* 移动端特殊处理：维持 85px 以防撑开屏幕 */
+@media screen and (max-width: 768px) {
+  .md-typeset table:not([class]) td img {
+    max-height: 85px !important;
+  }
+}
+
+/* 优化表格内按钮 */
+.md-typeset table:not([class]) .fs-download-btn {
+  padding: 4px 15px !important;
+  font-size: 14px !important;
+  margin: 0 !important;
+}
+
+/* 奇偶行处理 */
+.md-typeset table:not([class]) tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.012) !important;
+}
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* 9. Assets & Icons */
+img.flag-icon {
+  height: 15px; width: auto; border-radius: 2px;
+  vertical-align: middle; margin-right: 8px; margin-bottom: 2px;
+  display: inline-block; border: 0.5px solid rgba(0,0,0,0.05); 
+}
+
+/* 10. Layout Balance & TOC Border */
+@media screen and (min-width: 60em) {
+  .md-grid { max-width: 1380px !important; }
+  .md-content { box-shadow: inset 1px 0 0 var(--fs-divider) !important; }
+  .md-sidebar--secondary nav.md-nav--secondary { position: relative; padding-left: 16px !important; }
+  .md-sidebar--secondary nav.md-nav--secondary::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 1px; background-color: var(--fs-divider); z-index: 1;
+  }
+}
+
+/* 表格内容强制不换行工具类 */
+.no-wrap {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+}
+
+/* 表格合并单元格不换行（cad-files 用） */
+.no-wrap-cell {
+  white-space: nowrap !important;
+}
+
+.no-wrap-cell ul li,
+.no-wrap-cell ul li a,
+.no-wrap-cell strong {
+  white-space: nowrap !important;
+}
+
+/* [1-10 部分保持不变] */
+
+/* 11. E-commerce Purchase Cards (V47.0 布局专用) */
+.fs-buy-grid {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: 20px !important;
+  margin: 2.0rem auto !important;
+}
+
+.md-typeset .fs-buy-card {
+  width: 260px !important; 
+  flex: 0 0 260px !important;
+  border: 1px solid var(--fs-divider) !important; /* 卡片外大框 */
+  border-radius: 12px !important;
+  padding: 12px !important;
+  background-color: var(--md-default-bg-color) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.fs-buy-card p { margin: 0 !important; display: block !important; width: 100% !important; }
+
+/* 重点：Section 11 里的图片宽度跟随卡片，样式继承 Section 7 */
+.fs-buy-card img { 
+  width: 100% !important; 
+  max-width: 100% !important;
+}
+
+/* 12. 按钮样式 (精致胶囊型) */
+.md-typeset .fs-download-btn {
+  background-color: var(--fs-accent) !important;
+  color: #FFFFFF !important;
+  border: 1px solid var(--fs-accent) !important;
+  border-radius: 8px !important;   /* 更圆润的按钮 */
+  padding: 4px 30px !important;    /* 左右撑开 */
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  transition: all 0.25s ease;
+  display: inline-block !important;
+  white-space: nowrap !important;  /* 禁止文字换行 */
+}
+
+/* 按钮文字颜色优先级高于正文链接颜色规则 */
+.md-content .md-typeset a.fs-download-btn,
+.md-content .md-typeset a.fs-download-btn:visited,
+.md-content .md-typeset a.fs-download-btn:focus,
+.md-content .md-typeset a.fs-download-btn:active {
+  color: #FFFFFF !important;
+  text-decoration: none !important;
+}
+
+.md-typeset .fs-download-btn:hover { 
+  opacity: 0.9; 
+  transform: translateY(-2px); 
+  box-shadow: 0 4px 10px rgba(134, 65, 169, 0.3) !important;
+  color: #FFFFFF !important; 
+}
+
+.md-content .md-typeset a.fs-download-btn:hover {
+  color: #FFFFFF !important;
+}
+
+/* ==========================================================================
+13. Code Blocks - VS Code 官方一体化方案 (V52.1.1 加固版)
+==========================================================================
+*/
+/* [A] 最外层容器：唯一的边框和 8px 圆角承载者 */
+.md-typeset div.highlight {
+  position: relative !important;
+  margin: var(--fs-space-base) 0 !important;
+  background-color: #f8f8f8 !important; /* 浅色模式底色 */
+  border: 1px solid var(--fs-divider) !important;
+  border-radius: 8px !important;        /* 统一改为 8px */
+  padding: 0 !important;                /* 彻底消除外层自带的 padding */
+  /* 细节修正 1：防止标题栏背景溢出圆角 */
+  overflow: hidden !important;          
+}
+
+/* [B] 标题栏：占据容器顶部 34px 高度 */
+.md-typeset div.highlight::before {
+  content: "CODE"; 
+  display: block !important;
+  height: 34px !important;
+  line-height: 34px !important;
+  padding: 0 16px !important;
+  background-color: rgba(0, 0, 0, 0.04) !important; /* VS Code 式浅灰标题栏 */
+  color: var(--fs-header-fg) !important;
+  font-family: var(--md-code-font-family);
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--fs-divider) !important;
+  /* 确保标题栏顶部的圆角与外层一致 */
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+/* 语言自动识别（根据 code 的语言类名） */
+.md-typeset div.highlight:has(code.language-json)::before { content: "JSON" !important; }
+.md-typeset div.highlight:has(code.language-python)::before { content: "PYTHON" !important; }
+.md-typeset div.highlight:has(code.language-bash)::before { content: "BASH" !important; }
+.md-typeset div.highlight:has(code.language-shell)::before { content: "SHELL" !important; }
+.md-typeset div.highlight:has(code.language-sh)::before { content: "SHELL" !important; }
+.md-typeset div.highlight:has(code.language-cpp)::before { content: "C++" !important; }
+.md-typeset div.highlight.language-json::before { content: "JSON" !important; }
+.md-typeset div.highlight.language-python::before { content: "PYTHON" !important; }
+.md-typeset div.highlight.language-bash::before { content: "BASH" !important; }
+.md-typeset div.highlight.language-shell::before { content: "SHELL" !important; }
+.md-typeset div.highlight.language-sh::before { content: "SHELL" !important; }
+.md-typeset div.highlight.language-cpp::before { content: "C++" !important; }
+
+/* [C] 正文区域：去除所有嵌套背景 */
+.md-typeset div.highlight pre {
+  margin: 0 !important;
+  padding: 12px 16px !important; 
+  background-color: transparent !important; /* 透明以露出外层底色 */
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  overflow: auto !important;
+  /* 细节修正 2：确保滚动条不遮挡按钮 */
+  scrollbar-gutter: stable;
+}
+
+.md-typeset div.highlight pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+}
+
+/* [D] 复制按钮：精准移动至标题栏内部 (34px 高度) */
+.md-typeset .md-clipboard {
+  position: absolute !important;
+  top: 5px !important;      /* 调整至标题栏垂直居中 (34-24)/2 */
+  right: 10px !important;   /* 距离右边框 10px */
+  z-index: 10 !important;
+  background-color: transparent !important;
+  color: var(--fs-header-fg) !important;
+  transition: opacity 0.2s;
+  opacity: 0.4;
+}
+
+/* 细节修正 3：彻底干掉按钮自带的背景圈（MkDocs 默认会有个灰色圆圈） */
+.md-typeset .md-clipboard::after {
+  background-color: transparent !important;
+}
+
+.md-typeset .md-clipboard:hover {
+  opacity: 1;
+}
+
+/* [E] 深色模式适配 */
+[data-md-color-scheme="slate"] .md-typeset div.highlight {
+  background-color: #1e1e1e !important;
+}
+[data-md-color-scheme="slate"] .md-typeset div.highlight::before {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ==========================================================================
+   Nanxinwei Wiki - Admonition Customization
+   ========================================================================== */
+
+/* [1] 通用样式：统一所有提示框的边框厚度为 1px */
+.md-typeset .admonition, 
+.md-typeset details {
+  border-width: 1.0px !important;       /* 恢复为 1px */
+  border-left-width: 4px !important;  /* 左侧条稍微加粗以保持辨识度 */
+  border-radius: 4px;
+  box-shadow: none !important;
+  font-size: 14px !important;
+  margin-bottom: var(--fs-space-small) !important;
+}
+
+/* [2] Note 样式：恢复原生 */
+/* FAQ 需求：details 折叠块从蓝色改为灰色（仅影响 details） */
+.md-typeset details:not(.admonition) {
+  border-color: #e5e5e5 !important;
+  background-color: transparent !important;
+  padding: 0;
+  overflow: hidden;
+}
+[data-md-color-scheme="slate"] .md-typeset details:not(.admonition) {
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.md-typeset details:not(.admonition) > summary {
+  background-color: #e5e5e5;
+  padding: 0.65rem 1rem;
+  border-radius: 0;
+  border-bottom: 1px solid #e5e5e5;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  position: relative;
+}
+[data-md-color-scheme="slate"] .md-typeset details:not(.admonition) > summary {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-bottom-color: transparent;
+}
+.md-typeset details:not(.admonition) > summary::marker,
+.md-typeset details:not(.admonition) > summary::-webkit-details-marker {
+  display: none;
+}
+.md-typeset details:not(.admonition) > summary::before {
+  display: none !important;
+}
+.md-typeset details:not(.admonition) > summary::after {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+.md-typeset details[open]:not(.admonition) > summary::after {
+  transform: translateY(-50%) rotate(90deg) !important;
+}
+.md-typeset details:not(.admonition) > summary + * {
+  margin: 0;
+  padding: 0.7rem 1rem;
+  background: transparent;
+}
+.md-typeset details:not(.admonition) > summary + * > :first-child {
+  margin-top: 0;
+}
+.md-typeset details:not(.admonition) > summary + * > :last-child {
+  margin-bottom: 0;
+}
+
+/* [3] Important 定制 (保持 1px 边框和品牌色) */
+.md-typeset .admonition.important,
+.md-typeset details.important {
+  border-color: var(--fs-accent) !important;
+}
+.md-typeset .important > .admonition-title::before,
+.md-typeset .important > summary::before {
+  background-color: var(--fs-accent) !important;
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+  -webkit-mask-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12,17.27L18.18,21L16.45,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.55,13.97L5.82,21L12,17.27Z"/></svg>') !important;
+  mask-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12,17.27L18.18,21L16.45,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.55,13.97L5.82,21L12,17.27Z"/></svg>') !important;
+}
+
+/* [4] Tip 定制 (保持 1px 边框和青色) */
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: #00BFA5 !important;
+}
+.md-typeset .tip > .admonition-title::before,
+.md-typeset .tip > summary::before {
+  background-color: #00BFA5 !important;
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+  -webkit-mask-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12,2A7,7 0 0,0 5,9C5,11.39 6.19,13.5 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.5 19,11.39 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21M12,4A5,5 0 0,1 17,9C17,11.05 15,12.5 15,14H9C9,12.5 7,11.05 7,9A5,5 0 0,1 12,4Z"/></svg>') !important;
+  mask-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12,2A7,7 0 0,0 5,9C5,11.39 6.19,13.5 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.5 19,11.39 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21M12,4A5,5 0 0,1 17,9C17,11.05 15,12.5 15,14H9C9,12.5 7,11.05 7,9A5,5 0 0,1 12,4Z"/></svg>') !important;
+}  
+
+/* --- 贡献者头像：行内圆形版 --- */
+
+/* 1. 确保列表项内容可以水平排列 */
+.md-typeset li {
+    display: list-item; /* 保持列表符号 */
+}
+
+/* 2. 行内头像容器 */
+.fs-contributors-inline {
+    display: inline-flex !important;
+    vertical-align: middle; /* 与文字对齐 */
+    margin-left: 10px;      /* 距离文字的间距 */
+    gap: 8px;
+}
+
+/* 3. 强制头像为圆形、无边框、不换行 */
+.md-typeset .fs-avatar {
+    display: inline-block !important; /* 覆盖全局 block */
+    width: 45px !important;           /* 稍微缩小以匹配行高 */
+    height: 45px !important;
+    
+    /* 核心形状：50% 确保正圆 */
+    border-radius: 50% !important; 
+    
+    /* 彻底去掉所有边框和阴影 */
+    border: none !important; 
+    outline: none !important;
+    box-shadow: none !important;
+    
+    /* 消除 Section 7 的 margin auto 居中影响 */
+    margin: 0 !important; 
+    
+    /* 确保图片填充且不拉伸 */
+    object-fit: cover !important;
+    max-width: none !important;
+    
+    transition: transform 0.2s ease !important;
+}
+
+/* 悬停微调 */
+.md-typeset .fs-avatar:hover {
+    transform: scale(1.2) !important;
+}
+
+/* 16. Market Content - 产品购物卡片专属 (V1.2) */
+
+/* [A] 栅格容器 */
+.fs-buy-grid {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 20px !important;
+  justify-content: center !important;
+  margin: 1.5rem 0 !important;
+}
+
+/* [B] 卡片主体 */
+.fs-buy-card {
+  flex: 0 1 280px !important;
+  max-width: 300px !important;
+  text-align: center !important;
+  padding: 16px !important;
+  border: 1px solid var(--fs-divider) !important;
+  border-radius: 8px !important;
+  background-color: transparent !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* [C] 图片：彻底“素颜”化，强力覆盖 Section 7 的紫框 */
+/* 使用三级连写提升权重，确保彻底剥离边框、背景、阴影和位移 */
+.md-typeset .fs-buy-card img,
+.md-typeset .fs-buy-card img:hover {
+  width: auto !important;
+  max-width: 100% !important;
+  height: auto !important;
+  /* 强力重置边框样式 */
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  padding: 0 !important;
+  margin: 0 auto 12px auto !important;
+  /* 彻底禁用任何悬停位移或动画 */
+  transform: none !important;
+  transition: none !important;
+}
+
+/* [D] 型号文字：16px, 600字重 */
+.fs-product-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--fs-header-fg) !important;
+  margin-bottom: 8px !important;
+  line-height: 1.4 !important;
+  text-align: center !important;
+}
+
+/* [E] 价格文字：Logo色, 16px, 600字重 */
+.fs-product-price {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: var(--fs-accent) !important; 
+  margin-bottom: 15px !important;
+  text-align: center !important;
+}
+
+/* [F] 按钮：居中并微调 */
+.fs-buy-card .md-button {
+  margin: 0 auto !important;
+  display: inline-block !important;
+  font-size: 14px !important; /* 按钮文字略小一点更有层次感 */
+}
+
+/* 17. SDK Index Cards */
+.md-typeset .grid.cards.sdk-cards > ul > li {
+  border: 1px solid rgba(0, 0, 0, 0.24) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.md-typeset .grid.cards.sdk-cards > ul > li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16) !important;
+}
+
+.md-typeset .grid.cards.sdk-cards > ul > li > p:last-child {
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards.sdk-cards > ul > li {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.38) !important;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .grid.cards.sdk-cards > ul > li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.48) !important;
+}

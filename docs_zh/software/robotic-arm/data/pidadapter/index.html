@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cello Robotic Arm Tuning Tool - Fashion Star</title>
+    <style>
+        :root {
+            --primary: #2563eb; /* blue-600 */
+            --primary-hover: #1d4ed8; /* blue-700 */
+            --bg-body: #f8fafc; /* slate-50 */
+            --bg-white: #ffffff;
+            --text-main: #1e293b; /* slate-800 */
+            --text-sub: #64748b; /* slate-500 */
+            --border: #e2e8f0; /* slate-200 */
+            --danger: #dc2626; /* red-600 */
+            --danger-bg: #fef2f2; /* red-50 */
+            --danger-border: #fee2e2; /* red-100 */
+            --success-bg: #dcfce7; /* green-100 */
+            --success-text: #16a34a; /* green-600 */
+            --radius-xl: 1rem; /* rounded-2xl */
+            --radius-lg: 0.5rem; /* rounded-lg */
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; }
+
+        /* Header */
+        header {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            box-shadow: var(--shadow);
+        }
+        .brand { display: flex; align-items: center; gap: 0.75rem; }
+        .brand h1 { font-size: 1.5rem; font-weight: 900; color: var(--primary-hover); letter-spacing: -0.025em; }
+        .brand .divider { height: 1.5rem; width: 1px; background: #cbd5e1; }
+        .brand span { color: var(--text-sub); font-weight: 500; font-size: 0.875rem; }
+
+        .controls { display: flex; align-items: center; gap: 1rem; }
+        
+        /* Status Badge */
+        .badge {
+            display: none; /* Hidden on mobile by default */
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.625rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        @media (min-width: 768px) { .badge { display: flex; } }
+        
+        .badge.disconnected { background: #f1f5f9; color: var(--text-sub); }
+        .badge.connected { background: var(--success-bg); color: var(--success-text); }
+        .badge .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; margin-right: 0.5rem; }
+        .badge.disconnected .dot { background: #94a3b8; }
+        .badge.connected .dot { background: #22c55e; }
+
+        /* Language Switcher */
+        .lang-switch { background: #f1f5f9; padding: 0.25rem; border-radius: 0.75rem; display: flex; gap: 0.25rem; }
+        .lang-btn {
+            border: none; padding: 0.375rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+        }
+        .lang-btn.active { background: var(--primary-hover); color: white; }
+        .lang-btn.inactive { background: transparent; color: var(--text-sub); }
+
+        /* Main Content */
+        main { max-width: 56rem; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+        .card {
+            background: var(--bg-white);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        /* Section 1: Connect */
+        .connect-row { display: flex; flex-direction: column; gap: 1rem; justify-content: space-between; align-items: center; }
+        @media (min-width: 768px) { .connect-row { flex-direction: row; } }
+        
+        h2 { font-size: 1.125rem; font-weight: 700; color: var(--text-main); }
+        .desc { color: var(--text-sub); font-size: 0.875rem; margin-top: 0.25rem; }
+
+        .btn-primary {
+            background: var(--primary); color: white; border: none;
+            padding: 0.75rem 2.5rem; border-radius: 0.75rem; font-weight: 700;
+            cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+            width: 100%;
+        }
+        @media (min-width: 768px) { .btn-primary { width: auto; } }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-primary:active { transform: scale(0.98); }
+
+        /* Section 2: Modes */
+        .warning-box {
+            background: var(--danger-bg); border: 1px solid var(--danger-border);
+            border-radius: 0.75rem; padding: 1rem; margin-bottom: 2rem; text-align: center;
+        }
+        .warning-text { color: var(--danger); font-weight: 900; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        .mode-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 768px) { .mode-grid { grid-template-columns: repeat(3, 1fr); } }
+
+        .mode-card {
+            background: var(--bg-body); border: 2px solid #f1f5f9;
+            border-radius: var(--radius-xl); padding: 1.5rem;
+            text-align: left; cursor: pointer; transition: all 0.2s;
+            width: 100%;
+        }
+        .mode-card:hover { background: white; border-color: var(--primary); box-shadow: var(--shadow-lg); }
+        .mode-title { display: block; font-weight: 700; color: var(--text-main); font-size: 1.125rem; margin-bottom: 0.75rem; }
+        .mode-card:hover .mode-title { color: var(--primary); }
+        .mode-desc { color: var(--text-sub); font-size: 0.75rem; line-height: 1.5; }
+
+        /* Progress Bar */
+        #progress-container { margin-top: 3rem; display: none; border-top: 1px solid var(--border); padding-top: 2rem; }
+        #progress-container.active { display: block; }
+        .progress-header { display: flex; justify-content: space-between; font-size: 0.875rem; font-weight: 700; color: var(--primary-hover); margin-bottom: 0.75rem; }
+        .progress-track { width: 100%; background: #f1f5f9; border-radius: 9999px; height: 1rem; overflow: hidden; box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05); }
+        .progress-fill { background: var(--primary); height: 100%; width: 0; transition: width 0.4s ease; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px); z-index: 50;
+            display: none; align-items: center; justify-content: center; padding: 1rem;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-content {
+            background: white; border-radius: 1.5rem; max-width: 28rem; width: 100%;
+            padding: 2rem; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            animation: zoomIn 0.3s ease;
+        }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        
+        .modal-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; text-align: center; }
+        .modal-body { color: var(--text-sub); font-size: 0.875rem; margin-top: 1rem; text-align: center; line-height: 1.6; }
+        
+        .modal-actions { margin-top: 2rem; display: flex; gap: 1rem; }
+        .btn-cancel { flex: 1; padding: 0.75rem; background: #f1f5f9; color: #475569; border: none; border-radius: 0.75rem; font-weight: 700; cursor: pointer; }
+        .btn-cancel:hover { background: #e2e8f0; }
+        .btn-confirm { flex: 1; padding: 0.75rem; background: var(--danger); color: white; border: none; border-radius: 0.75rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3); }
+        .btn-confirm:hover { background: #b91c1c; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <h1 id="ui-company">华馨京科技</h1>
+        <span class="divider"></span>
+        <span>Cello Tuning Web Tool</span>
+    </div>
+    <div class="controls">
+        <div id="connection-badge" class="badge disconnected">
+            <span class="dot"></span><span class="text">DISCONNECTED</span>
+        </div>
+        <div class="lang-switch">
+            <button onclick="toggleLanguage('zh')" id="lang-btn-zh" class="lang-btn active">中</button>
+            <button onclick="toggleLanguage('en')" id="lang-btn-en" class="lang-btn inactive">EN</button>
+        </div>
+    </div>
+</header>
+
+<main>
+    <section class="card">
+        <div class="connect-row">
+            <div>
+                <h2 id="ui-step1">1. 设备连接</h2>
+                <p id="ui-step1-desc" class="desc">请连接机械臂串口（推荐 Chrome/Edge 浏览器）</p>
+            </div>
+            <button onclick="initPort()" id="btn-connect" class="btn-primary">
+                连接机械臂
+            </button>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2 id="ui-step2" style="margin-bottom: 1.5rem;">2. 动力模式优化</h2>
+
+        <div class="warning-box">
+            <p id="ui-warning" class="warning-text animate-pulse">
+                写入参数期间禁止断电或拔出数据线
+            </p>
+        </div>
+
+        <div class="mode-grid">
+            <button onclick="handleModeClick('light')" class="mode-card group">
+                <span id="ui-m1-title" class="mode-title">轻载模式 (柔顺防抖)</span>
+                <p id="ui-m1-desc" class="mode-desc">优化慢速运动抖动，适用于空载场景。</p>
+            </button>
+            <button onclick="handleModeClick('standard')" class="mode-card group">
+                <span id="ui-m2-title" class="mode-title">标准模式 (平衡通用)</span>
+                <p id="ui-m2-desc" class="mode-desc">适用于常规操作，平衡力度与平顺性。</p>
+            </button>
+            <button onclick="handleModeClick('heavy')" class="mode-card group">
+                <span id="ui-m3-title" class="mode-title">重载模式 (高刚性)</span>
+                <p id="ui-m3-desc" class="mode-desc">适用于末端负载较大场景，增强大臂刚性。</p>
+            </button>
+        </div>
+
+        <div id="progress-container">
+            <div class="progress-header">
+                <span id="ui-status">就绪...</span>
+                <span id="ui-percent">0%</span>
+            </div>
+            <div class="progress-track">
+                <div id="progress-bar" class="progress-fill"></div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- MODAL -->
+<div id="confirm-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="ui-modal-title" class="modal-title">确认写入参数？</h3>
+        <p id="ui-modal-body" class="modal-body">
+            更新参数期间请务必保证电源稳定。任何中断都可能导致舵机配置损坏。
+        </p>
+        <div class="modal-actions">
+            <button id="ui-btn-cancel" onclick="closeModal()" class="btn-cancel">
+                取消
+            </button>
+            <button id="btn-final-confirm" class="btn-confirm">
+                确定写入
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "./presets.json";
+
+    // 优化后的 LOCAL_FALLBACK 参数
+    const LOCAL_FALLBACK = {
+        version: "1.0.0-fallback",
+        presets: {
+            light: { // 对应 Python 文件 2 的内部参数 (kp=200)
+                kp: [200, 200, 200, 200, 200, 200, 800],
+                stall_limit: [30000, 50000, 50000, 6000, 6000, 6000, 2000],
+                power_limit: [30000, 50000, 50000, 25000, 25000, 20000, 4000],
+                current_limit: [8000, 8000, 8000, 6000, 4000, 4000, 4000]
+            },
+            standard: { // 对应 Python 文件 3 的内部参数 (kp=450)
+                kp: [450, 450, 450, 450, 450, 450, 800],
+                stall_limit: [30000, 50000, 50000, 6000, 6000, 6000, 2000],
+                power_limit: [30000, 50000, 50000, 25000, 25000, 20000, 4000],
+                current_limit: [8000, 8000, 8000, 6000, 4000, 4000, 4000]
+            },
+            heavy: { // 对应 Python 文件 1 的内部参数 (kp=850)
+                kp: [850, 850, 850, 800, 800, 800, 800],
+                stall_limit: [30000, 50000, 50000, 6000, 6000, 6000, 2000],
+                power_limit: [30000, 50000, 50000, 25000, 25000, 20000, 4000],
+                current_limit: [8000, 8000, 8000, 6000, 4000, 4000, 4000]
+            }
+        }
+    };
+
+    let currentLang = 'zh';
+    let port, writer, presetsData = null;
+
+    const i18n = {
+        zh: {
+            company: "华馨京科技", step1: "1. 设备连接", step1Desc: "请连接机械臂串口（推荐 Chrome/Edge 浏览器）",
+            btnConn: "连接机械臂", step2: "2. 动力模式优化", warning: "写入参数期间禁止断电或拔出数据线",
+            m1T: "轻载模式 (柔顺防抖)", m1D: "优化慢速运动抖动，适用于空载场景。",
+            m2T: "标准模式 (平衡通用)", m2D: "适用于常规操作，平衡力度与平顺性。",
+            m3T: "重载模式 (高刚性)", m3D: "适用于末端负载较大场景，增强大臂刚性。",
+            status: "正在配置 ID:{id} 舵机...", done: "配置成功！", modalT: "确认写入参数？",
+            modalB: "更新参数期间请务必保证电源稳定。任何形式的中断都可能损坏设备。",
+            pOnline: "已连接", pOffline: "未连接",
+            btnCancel: "取消", btnConfirm: "确定写入"
+        },
+        en: {
+            company: "Fashion Star", step1: "1. Connection", step1Desc: "Connect Cello arm via Chrome/Edge browser",
+            btnConn: "Connect Arm", step2: "2. PID Optimization", warning: "DO NOT DISCONNECT POWER/CABLE DURING WRITING",
+            m1T: "Light Mode (Smooth)", m1D: "Minimized jitter, best for empty loads.",
+            m2T: "Standard Mode (Balanced)", m2D: "Balanced response for general daily tasks.",
+            m3T: "Heavy Mode (Rigidity)", m3D: "Enhanced rigidity for heavy end-loads.",
+            status: "Configuring Servo ID:{id}...", done: "Optimization Complete!", modalT: "Confirm Write?",
+            modalB: "Ensure power stability. Any interruption may damage the servo configuration.",
+            pOnline: "ONLINE", pOffline: "DISCONNECTED",
+            btnCancel: "Cancel", btnConfirm: "Confirm Write"
+        }
+    };
+
+    async function fetchPresets() {
+        try {
+            const response = await fetch(API_URL, { mode: 'cors' });
+            if (!response.ok) throw new Error();
+            presetsData = await response.json();
+        } catch (e) {
+            console.warn("Failed to fetch presets from API, using local fallback.", e);
+            presetsData = LOCAL_FALLBACK;
+        }
+    }
+
+    function toggleLanguage(lang) {
+        currentLang = lang;
+        const d = i18n[lang];
+
+        document.getElementById('ui-company').innerText = d.company;
+        document.getElementById('ui-step1').innerText = d.step1;
+        document.getElementById('ui-step1-desc').innerText = d.step1Desc;
+        document.getElementById('btn-connect').innerText = port ? d.pOnline : d.btnConn;
+        document.getElementById('ui-step2').innerText = d.step2;
+        document.getElementById('ui-warning').innerText = d.warning;
+        document.getElementById('ui-m1-title').innerText = d.m1T;
+        document.getElementById('ui-m1-desc').innerText = d.m1D;
+        document.getElementById('ui-m2-title').innerText = d.m2T;
+        document.getElementById('ui-m2-desc').innerText = d.m2D;
+        document.getElementById('ui-m3-title').innerText = d.m3T;
+        document.getElementById('ui-m3-desc').innerText = d.m3D;
+        document.getElementById('ui-modal-title').innerText = d.modalT;
+        document.getElementById('ui-modal-body').innerText = d.modalB;
+        document.getElementById('ui-btn-cancel').innerText = d.btnCancel;
+        document.getElementById('btn-final-confirm').innerText = d.btnConfirm;
+
+        const btnZh = document.getElementById('lang-btn-zh');
+        const btnEn = document.getElementById('lang-btn-en');
+        
+        // Simplified class toggling logic
+        if (lang === 'zh') {
+            btnZh.classList.add('active'); btnZh.classList.remove('inactive');
+            btnEn.classList.add('inactive'); btnEn.classList.remove('active');
+        } else {
+            btnZh.classList.add('inactive'); btnZh.classList.remove('active');
+            btnEn.classList.add('active'); btnEn.classList.remove('inactive');
+        }
+    }
+
+    async function initPort() {
+        try {
+            port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 1000000 });
+            updateConnStatus(true);
+        } catch (e) {
+            console.error("Failed to connect to serial port:", e);
+            alert(currentLang === 'zh' ? "连接串口失败，请确保已选择正确的串口并授权。" : "Failed to connect to serial port. Ensure you selected the correct port and granted permission.");
+            updateConnStatus(false);
+        }
+    }
+
+    function updateConnStatus(connected) {
+        const badge = document.getElementById('connection-badge');
+        const badgeText = badge.querySelector('.text');
+        const d = i18n[currentLang];
+
+        if (connected) {
+            badge.classList.remove('disconnected');
+            badge.classList.add('connected');
+            badgeText.innerText = d.pOnline;
+        } else {
+            badge.classList.remove('connected');
+            badge.classList.add('disconnected');
+            badgeText.innerText = d.pOffline;
+        }
+        
+        document.getElementById('btn-connect').innerText = connected ? d.pOnline : d.btnConn;
+    }
+
+    function handleModeClick(mode) {
+        if (!port) {
+            alert(currentLang === 'zh' ? "请先连接设备" : "Please connect device first");
+            return;
+        }
+        document.getElementById('confirm-modal').classList.add('open');
+        document.getElementById('btn-final-confirm').onclick = () => runSequence(mode);
+    }
+
+    function closeModal() {
+        document.getElementById('confirm-modal').classList.remove('open');
+    }
+
+
+    async function runSequence(modeKey) {
+        closeModal();
+        if (!presetsData) {
+            await fetchPresets();
+        }
+        const preset = presetsData.presets[modeKey]; 
+        const container = document.getElementById('progress-container');
+        const bar = document.getElementById('progress-bar');
+        const statusLabel = document.getElementById('ui-status');
+        const percentLabel = document.getElementById('ui-percent');
+        container.classList.add('active');
+        writer = port.writable.getWriter();
+        try {
+            for (let i = 0; i <= 6; i++) {
+                const prog = Math.round(((i + 1) / 7) * 100);
+                statusLabel.innerText = i18n[currentLang].status.replace('{id}', i);
+                await writer.write(packPublic(i, preset.stall_limit[i], preset.current_limit[i], preset.power_limit[i]));
+                await new Promise(r => setTimeout(r, 150)); // 短暂延时
+                await writer.write(packInternal(i, preset.kp[i]));
+                bar.style.width = prog + '%';
+                percentLabel.innerText = prog + '%';
+                await new Promise(r => setTimeout(r, 200)); // 短暂延时
+            }
+            statusLabel.innerText = i18n[currentLang].done;
+            bar.style.width = '100%';
+            percentLabel.innerText = '100%';
+        } catch (err) {
+            console.error("Error during parameter writing sequence:", err);
+            alert(currentLang === 'zh' ? `写入参数失败: ${err.message}` : `Failed to write parameters: ${err.message}`);
+        } finally {
+            if (writer) {
+                writer.releaseLock();
+            }
+        }
+    }
+
+    // packPublic 函数
+    function packPublic(id, stall, current, power) { 
+        const header = [0x12, 0x4C, 0x06, 0x21];
+        const p = new Uint8Array(33); // 33字节的参数部分
+        const v = new DataView(p.buffer);
+
+        // 字节 0-6: servo_id, 0x01, need_response, servo_id, 0x00, baudrate, stall_protection
+        p[0] = id;           // 舵机ID
+        p[1] = 0x01;         // 固定值
+        p[2] = 0;            // need_response (0)
+        p[3] = id;           // 舵机ID
+        p[4] = 0x00;         // 固定值
+        p[5] = 8;            // baudrate (8)
+        p[6] = 0;            // stall_protection (0)
+
+        // 字节 7-8: stall_power_limit (2字节，小端序)
+        v.setUint16(7, stall, true);
+
+        // 字节 9-10: low_voltage_protection (2字节，小端序)
+        v.setUint16(9, 4000, true);
+
+        // 字节 11-12: high_voltage_protection (2字节，小端序)
+        v.setUint16(11, 20000, true);
+
+        // 字节 13-14: temperature_protection (2字节，小端序)
+        v.setUint16(13, 735, true);
+
+        // 字节 15-16: power_protection (2字节，小端序) - 新增
+        v.setUint16(15, power, true);
+
+        // 字节 17-18: current_protection (2字节，小端序)
+        v.setUint16(17, current, true);
+
+        // 字节 19: startup_force (1字节)
+        p[19] = 0;
+
+        // 字节 20: hysteresis_percent (1字节)
+        p[20] = 80;
+
+        // 字节 21: power_lock_switch (1字节)
+        p[21] = 0;
+
+        // 字节 22: wheel_mode_brake_switch (1字节)
+        p[22] = 0;
+
+        // 字节 23: angle_limit_switch (1字节)
+        p[23] = 1;
+
+        // 字节 24: soft_start_switch (1字节)
+        p[24] = 0;
+
+        // 字节 25-26: soft_start_time (2字节，小端序)
+        v.setUint16(25, 3000, true);
+
+        // 字节 27-28: angle_upper_limit (2字节，小端序)
+        v.setUint16(27, 1800, true);
+
+        // 字节 29-30: angle_lower_limit (2字节，小端序)
+        v.setInt16(29, -1800, true);
+
+        // 字节 31-32: 保留字节 (2字节)
+        p[31] = 0x00;
+        p[32] = 0x00;
+
+        const buf = [...header, ...Array.from(p)];
+        // 计算校验和并添加到数据包末尾
+        buf.push(buf.reduce((a, b) => (a + b) % 256, 0));
+        return new Uint8Array(buf);
+    }
+
+    // packInternal 函数
+    function packInternal(id, kp) {
+        const header = [0x13, 0x4D, 0xC4, 0x1A];
+        const p = new Uint8Array(26); // 26字节的参数部分
+        const v = new DataView(p.buffer);
+
+        // 字节 0: servo_id
+        p[0] = id;
+
+        // 字节 1-2: Kp (2字节，小端序)
+        v.setUint16(1, kp, true);
+
+        // 字节 3-4: Kd (2字节，小端序)
+        v.setUint16(3, 50, true);
+
+        // 字节 5-6: Ki (2字节，小端序)
+        v.setUint16(5, 0, true);
+
+        // 字节 7-8: Bias (2字节，小端序)
+        v.setUint16(7, 0, true);
+
+        // 字节 9-10: Hold Kp (2字节，小端序)
+        v.setUint16(9, kp, true); // 与 Kp 相同
+
+        // 字节 11-12: Hold Kd (2字节，小端序)
+        v.setUint16(11, 50, true);
+
+        // 字节 13-14: Hold Bias (2字节，小端序)
+        v.setUint16(13, 0, true);
+
+        // 字节 15-20: 固定字节 [0x10, 0x0E, 0x00, 0x00, 0xA4, 0x0B]
+        p[15] = 0x10;
+        p[16] = 0x0E;
+        p[17] = 0x00;
+        p[18] = 0x00;
+        p[19] = 0xA4;
+        p[20] = 0x0B;
+
+        // 字节 21: forward_direction (1字节)
+        p[21] = 0;
+
+        // 字节 22: 固定字节 0x05
+        p[22] = 0x05;
+
+        // 字节 23: dead_zone (1字节)
+        p[23] = 3;
+
+        // 字节 24-25: 固定字节 [0x00, 0x01]
+        p[24] = 0x00;
+        p[25] = 0x01;
+
+        const buf = [...header, ...Array.from(p)];
+        buf.push(buf.reduce((a, b) => (a + b) % 256, 0));
+        return new Uint8Array(buf);
+    }
+
+    window.addEventListener('load', () => {
+        fetchPresets();
+        toggleLanguage(currentLang); 
+    });
+</script>
+
+</body>
+</html>

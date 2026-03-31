@@ -1,0 +1,351 @@
+
+site_name: 南芯微 Wiki
+site_url: "https://james986.github.io/nanxin-wiki/"
+use_directory_urls: true
+repo_url: "https://github.com/james986/nanxin-wiki"
+
+docs_dir: docs_zh
+site_dir: site
+
+theme:
+  name: material
+  language: zh
+  custom_dir: overrides 
+  favicon: assets/favicon.png
+  font:
+    text: false
+    code: false
+  logo: assets/favicon.png
+  features:
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - content.code.copy
+    - toc.follow
+    - content.tabs.link
+    - navigation.tabs
+    # - content.action.edit  # 必须开启，才会出现铅笔图标
+    - navigation.footer
+    # - navigation.instant
+    # - navigation.instant.progress
+    # - navigation.instant.prefetch
+
+
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: fashion/dark-mode
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: fashion/light-mode
+        name: Switch to light mode
+        
+extra:
+  generator: false
+
+copyright: Copyright &copy; 2026 - 2027 南芯微
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list                # 必须保留，用于识别 { .class }
+  - md_in_html               # 关键：允许在 <div> 等 HTML 标签内解析 Markdown
+  - toc:
+      toc_depth: "2-3"
+  - pymdownx.details
+  - pymdownx.highlight:
+      use_pygments: true
+      pygments_lang_class: true
+  - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_index: !!python/name:pymdownx.emoji.twemoji
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
+  - pymdownx.caret
+  - pymdownx.tilde
+
+hooks:
+  - docs_zh/hooks/gh_alerts.py
+
+plugins:
+  - search:
+      separator: '[\s\u200b\-]'
+  - git-revision-date-localized:
+      type: timeago
+      enable_creation_date: false
+      fallback_to_build_date: true
+  - glightbox
+  - include-markdown:
+      rewrite_relative_urls: true
+      dedent: true
+  - macros
+
+
+# 中文的导航目录
+nav:
+  - 首页: index.md
+  - 舵机系列:
+    - servo/index.md
+    - 选型表: servo/selection/index.md
+    - UART 总线舵机:
+      - 产品规格书: 
+        - servo/uart/datasheet/index.md
+        - current-only: servo/uart/datasheet/current-only.md
+        - RX6-U12H-M: servo/uart/datasheet/rx6-u12h-m.md
+        - HX8-U26H-M: servo/uart/datasheet/hx8-u26h-m.md
+        - RX8-U26H-M: servo/uart/datasheet/rx8-u26h-m.md
+        - HX8-U28H-M: servo/uart/datasheet/hx8-u28h-m.md
+        - RX8-U28H-M: servo/uart/datasheet/rx8-u28h-m.md
+        - HX8-U29H-M: servo/uart/datasheet/hx8-u29h-m.md
+        - RX8-U29H-M: servo/uart/datasheet/rx8-u29h-m.md
+        - HX8-U45H-M: servo/uart/datasheet/hx8-u45h-m.md
+        - RX8-U45H-M: servo/uart/datasheet/rx8-u45h-m.md
+        - HX8-U50H-M: servo/uart/datasheet/hx8-u50h-m.md
+        - RX8-U50H-M: servo/uart/datasheet/rx8-u50h-m.md
+        - HX8-U51H-M: servo/uart/datasheet/hx8-u51h-m.md
+        - RX8-U51H-M: servo/uart/datasheet/rx8-u51h-m.md
+        - RX18-U100H-M: servo/uart/datasheet/rx18-u100h-m.md
+        - RX18-U101H-M: servo/uart/datasheet/rx18-u101h-m.md
+        - HP6-U15H-M: servo/uart/datasheet/hp6-u15h-m.md
+        - RP6-U15H-M: servo/uart/datasheet/rp6-u15h-m.md
+        - RP6-U12H-M: servo/uart/datasheet/rp6-u12h-m.md
+        - RP6-U18H-M: servo/uart/datasheet/rp6-u18h-m.md
+        - HP8-U45-M: servo/uart/datasheet/hp8-u45-m.md
+        - RP8-U45-M: servo/uart/datasheet/rp8-u45-m.md
+        - HP8-U45H-M: servo/uart/datasheet/hp8-u45h-m.md
+        - RP8-U45H-M: servo/uart/datasheet/rp8-u45h-m.md
+        - HA8-U25H-M: servo/uart/datasheet/ha8-u25h-m.md
+        - RA8-U25H-M: servo/uart/datasheet/ra8-u25h-m.md
+        - HA8-U25-M: servo/uart/datasheet/ha8-u25-m.md
+        - RA8-U25-M: servo/uart/datasheet/ra8-u25-m.md
+        - HA8-U35-M: servo/uart/datasheet/ha8-u35-m.md
+        - RA8-U35-M: servo/uart/datasheet/ra8-u35-m.md
+        - HA8-U35H-M: servo/uart/datasheet/ha8-u35h-m.md
+        - RA8-U35H-M: servo/uart/datasheet/ra8-u35h-m.md
+      - 图纸与模型下载:
+        - servo/uart/cad-files/index.md
+      - 通讯协议: servo/uart/protocols/uart-rs485-protocol.md  
+      - 调试软件与工具:
+        - servo/uart/software/index.md
+      - SDK 工具包:
+        - servo/uart/sdk/index.md
+      - 技术文档:
+        - servo/uart/documents/index.md
+    - RS485 总线舵机:
+      - 产品规格书:
+        - servo/rs485/datasheet/index.md
+        - current-only: servo/rs485/datasheet/current-only.md
+        - HX8-R28H-M: servo/rs485/datasheet/hx8-r28h-m.md
+        - HX8-R28W-M: servo/rs485/datasheet/hx8-r28w-m.md
+        - HX8-R29H-M: servo/rs485/datasheet/hx8-r29h-m.md
+        - HX8-R29W-M: servo/rs485/datasheet/hx8-r29w-m.md
+        - HX8-R50H-M: servo/rs485/datasheet/hx8-r50h-m.md
+        - HX8-R50W-M: servo/rs485/datasheet/hx8-r50w-m.md
+        - HX8-R51H-M: servo/rs485/datasheet/hx8-r51h-m.md
+        - HX8-R51W-M: servo/rs485/datasheet/hx8-r51w-m.md
+        - RX18-R100H-M: servo/rs485/datasheet/rx18-r100h-m.md
+        - RX18-R100W-M: servo/rs485/datasheet/rx18-r100w-m.md
+        - RX18-R101H-M: servo/rs485/datasheet/rx18-r101h-m.md
+        - RX18-R101W-M: servo/rs485/datasheet/rx18-r101w-m.md
+      - 图纸与模型下载:
+        - servo/rs485/cad-files/index.md
+      - 通讯协议: servo/rs485/protocols/uart-rs485-protocol.md
+      - 调试软件与工具:
+        - servo/rs485/software/index.md
+      - SDK 工具包:
+        - servo/rs485/sdk/index.md
+      - 技术文档:
+        - servo/rs485/documents/index.md
+    - CAN Bus 总线舵机:
+      - 产品规格书:
+        - servo/canbus/datasheet/index.md
+        - current-only: servo/canbus/datasheet/current-only.md
+        - HX18-C100H-M: servo/canbus/datasheet/hx8-c100h-m.md
+        - HX18-C100W-M: servo/canbus/datasheet/hx8-c100w-m.md
+      - 图纸与模型下载:
+        - servo/canbus/cad-files/index.md
+      - 通讯协议: servo/canbus/protocols/can-protocol.md  
+      - 调试软件与工具:
+        - servo/canbus/software/index.md
+      - SDK 工具包:
+        - servo/canbus/sdk/index.md
+      - 技术文档:
+        - servo/canbus/documents/index.md
+    - PWM 数字舵机:
+      - 产品规格书:
+        - servo/pwm/datasheet/index.md  
+        - current-only: servo/pwm/datasheet/current-only.md
+        - HA8-P25: servo/pwm/datasheet/ha8-p25.md
+        - RA8-P25: servo/pwm/datasheet/ra8-p25.md
+        - HA8-P26: servo/pwm/datasheet/ha8-p26.md
+        - RA8-P26: servo/pwm/datasheet/ra8-p26.md
+        - HA8-P35: servo/pwm/datasheet/ha8-p35.md
+        - RA8-P35: servo/pwm/datasheet/ra8-p35.md
+        - HA8-P36: servo/pwm/datasheet/ha8-p36.md
+        - RA8-P36: servo/pwm/datasheet/ra8-p36.md
+        - HP8-A45: servo/pwm/datasheet/hp8-a45.md
+        - RP8-A45: servo/pwm/datasheet/rp8-a45.md
+        - HX8-A45-M: servo/pwm/datasheet/hx8-a45-m.md
+        - HP8-A46: servo/pwm/datasheet/hp8-a46.md
+        - RP8-A46: servo/pwm/datasheet/rp8-a46.md
+      - 图纸与模型下载:
+        - servo/pwm/cad-files/index.md  
+  - 机械手臂:
+    - robotic-arm/index.md
+    - StarAI Arm:
+      - 产品规格书:
+        - Cello（遥操臂）: robotic-arm/star-ai-arm/datasheet/cello.md
+        - Viola（遥操臂）: robotic-arm/star-ai-arm/datasheet/viola.md
+        - Violin（跟随臂）: robotic-arm/star-ai-arm/datasheet/violin.md
+      - 图纸与模型下载:
+        - robotic-arm/star-ai-arm/cad-files/index.md
+      - 快速使用:
+        - 安装指引: robotic-arm/star-ai-arm/quick-start/assembly-guide.md
+        - ROS2: robotic-arm/star-ai-arm/quick-start/ros2.md
+        - Cello+Violin (Lerobot): robotic-arm/star-ai-arm/quick-start/cello-violin.md
+        - Viola+Violin (Lerobot): robotic-arm/star-ai-arm/quick-start/viola-violin.md
+        - Cello+Violin 2x2 (Lerobot): robotic-arm/star-ai-arm/quick-start/cello-violin-2-2.md
+      - 仿真:
+        - Gazebo: robotic-arm/star-ai-arm/simulation/gazebo.md
+      - 其他资源:
+        - 控制软件与工具: robotic-arm/star-ai-arm/resources/tools.md
+        - 应用案例: robotic-arm/star-ai-arm/resources/extended-applications.md
+        - 开源资料: robotic-arm/star-ai-arm/resources/open-resource.md
+        - 常见问题与解答: robotic-arm/star-ai-arm/resources/faq.md
+    - Star Arm 102:
+      - 产品规格: robotic-arm/star-arm-102/specifications.md
+      - 图纸与模型下载: robotic-arm/star-arm-102/cad-files.md
+      - 快速使用:
+        - 安装指引: robotic-arm/star-arm-102/quick-start/assembly-guide.md
+        - ROS2: robotic-arm/star-arm-102/quick-start/ros2.md
+        - LeRobot: robotic-arm/star-arm-102/quick-start/lerobot.md
+      - 其他资源:
+        - 调试工具: robotic-arm/star-arm-102/resources/tools.md
+        - 开源资料: robotic-arm/star-arm-102/resources/open-resource.md
+        - 常见问题与解答: robotic-arm/star-arm-102/resources/faq.md
+    - PiPER Mate:
+      - 产品规格: robotic-arm/piper-mate/specifications.md
+      - 图纸与模型下载: robotic-arm/piper-mate/cad-files.md
+      - 快速使用:
+        - 安装指引: robotic-arm/piper-mate/quick-start/quick-start.md
+        - Python SDK: robotic-arm/piper-mate/quick-start/python-sdk.md
+        - ROS2: robotic-arm/piper-mate/quick-start/ros2.md
+        - LeRobot: robotic-arm/piper-mate/quick-start/lerobot.md
+      - 其他资源:
+        - 用户手册: robotic-arm/piper-mate/resources/user-manual.md
+        - 开源资料: robotic-arm/piper-mate/resources/open-resource.md
+        - 常见问题与解答: robotic-arm/piper-mate/resources/faq.md
+  - 双足机器人:
+    - humanoid/index.md
+    - Atom-S（10自由度）:
+      - 产品规格书: humanoid/atom-s/datasheet-atom-s.md
+      - 快速开始（XIAO ESP32S3）: humanoid/atom-s/quick-start-atom-s.md
+      - 接入其他开源平台: humanoid/atom-s/open-resource-atom-s.md
+      - 图纸与模型下载: humanoid/atom-s/cad-files-atom-s.md
+      - 常见问题与解答: humanoid/atom-s/faq.md
+    - Atom-X（17自由度）:
+      - 产品规格书: humanoid/atom-x/datasheet-atom-x.md
+      - 快速开始（XIAO ESP32S3）: humanoid/atom-x/quick-start-atom-x.md
+      - 接入其他开源平台: humanoid/atom-x/open-resource-atom-x.md
+      - 图纸与模型下载: humanoid/atom-x/cad-files-atom-x.md
+      - 常见问题与解答: humanoid/atom-x/faq.md  
+  - 舵机云台:
+    - gimbal/index.md
+    - 物料清单: gimbal/list.md
+    - 开发环境配置: gimbal/environmental-configuration.md
+    - 工程结构: gimbal/engineering-structure.md
+    - 接线说明: gimbal/wiring-instruction.md
+    - 舵机云台组装教程: gimbal/assembly-tutorial.md
+    - 舵机通讯检测: gimbal/servo-communication.md
+    - 舵机角度控制: gimbal/servo-angle-control.md
+    - 舵机阻尼模式: gimbal/servo-damping-mode.md
+    - 舵机用户自定义数据: gimbal/user-defined.md
+  - PLC 工业应用:
+    - industrial/index.md
+    - 西门子 TIA Portal v19（S7-1200）: industrial/plc/sinamics-tia-portal-v19.md
+    - 西门子 STEP 7-MicroWIN SMART（S7-200 SMART）: industrial/plc/step7-microwin-smart.md
+    - 汇川 AutoShop（H5U）: industrial/plc/autoshop.md
+    - 汇川 InoproShop（AM401）: industrial/plc/inovance-inoproshop.md
+    - 三菱 GX Works2（FX3U）: industrial/plc/mitsubishi-gx-works2.md
+    - Codesys（GCAN302）: industrial/plc/codesys.md
+  - 软件与工具:
+    - software/index.md
+    - 舵机系列:
+      - PC 调试软件: software/servo/pc-config-software.md
+      - 网页调试工具: software/servo/web-config-tool.md
+      - 串口工具助手: software/servo/serial-port-assistant.md
+    - 机械手臂:
+      - PID调试工具 (Cello): software/robotic-arm/pid-tools.md
+      - 桌面控制软件: software/robotic-arm/web-config-tool.md
+    - 双足机器人:
+      - 通用动作编辑器: software/humanoid/robot-studio-pro.md
+      - 蓝牙遥控Web端: software/humanoid/bt-remote-control.md
+      - 格斗机器人动作编辑器: software/humanoid/fighter-editor.md
+  - SDK 工具包:
+    - sdk/index.md    
+    - 总线舵机 SDK: 
+      - STM32F103 SDK: sdk/servo/stm32f103-sdk.md
+      - STM32F407 SDK: sdk/servo/stm32f407-sdk.md
+      - Python SDK: sdk/servo/python-sdk.md
+      - MicroPython SDK: sdk/servo/micropython-sdk.md
+      - C++ SDK: sdk/servo/cpp-sdk.md
+      - C# SDK: sdk/servo/csharp-sdk.md
+      - ROS2 SDK: sdk/servo/ros2-sdk.md
+      - Arduino Uno SDK: sdk/servo/arduino-uno-sdk.md
+      - Arduino Mega 2560 SDK: sdk/servo/arduino-mega-2560-sdk.md
+      - ESP32 (NodeMCU-32S): sdk/servo/arduino-esp32-sdk.md
+      - STM32F103C8T6 (Arduino Core): sdk/servo/arduino-stm32f103c8t6-sdk.md
+      - Mixly(米思齐): skd/servo/mixly-sdk.md
+    - 机械手臂 SDK:
+      - PiPER Mate Python SDK: sdk/robotic-arm/python-sdk.md
+      - PiPER Mate ROS2 SDK: sdk/robotic-arm/ros2.md
+    - 双足机器人 SDK:
+      - Atom SDK: sdk/humanoid/atom-sdk.md  
+  - 技术文档:
+    - documents/index.md
+    - 总线伺服舵机使用基础:
+        - 产品选型、型号命名规则: documents/servo/model-selection-and-naming.md
+        - 总线舵机通讯协议对比: documents/servo/protocol-comparison.md
+        - 总线舵机连线及电源解决方案: documents/servo/wiring-and-power-solutions.md
+        - 线序说明: documents/servo/wire-sequence.md
+        - 舵盘/支架安装注意事项: documents/servo/horn-and-bracket-installation.md
+        - 静态扭矩、动态扭矩、额定扭矩的区别: documents/servo/torque-types-static-dynamic-rated.md
+        - 单双轴舵机的区别: documents/servo/single-vs-dual-shaft-servos.md
+        - 有刷舵机和无刷舵机的区别: documents/servo/brushed-vs-brushless-servos.md
+        - 云台应用 PID 调节说明: documents/servo/pid-tuning-guide.md
+    - 上位机使用技巧:
+        - 舵机未检测/无法响应问题分析: documents/servo/troubleshooting-not-detected-or-no-response.md
+        - 如何正确设置保护参数（功率、电压、温度）: documents/servo/setting-protection-parameters.md
+        - 上位机软件使用小技巧: documents/servo/software-tips.md
+    - 舵机功能详解及应用:
+        - 单圈/多圈角度控制: documents/servo/single-multi-turn.md
+        - 圈数重置/断电记忆: documents/servo/position-memory.md
+        - 阻尼模式详解及应用: documents/servo/damping-mode.md
+        - 停止模式详解及应用: documents/servo/stop-mode.md
+        - 同步模式详解及应用: documents/servo/synchronous-mode.md
+        - 异步模式详解及应用: documents/servo/asynchronous-mode.md
+        - 状态读取/数据监控: documents/servo/data-monitoring.md
+        - 原点设置操作说明: documents/servo/homing-setup.md
+    - SDK 应用相关:
+        - STM32F103SDKFlash 编译报错问题解决: documents/servo/stm32f103-sdkflash-build-errors.md
+        - 指令丢包问题及解决方法: documents/servo/command-packet-loss.md
+  - 周边配件:
+    - parts/index.md
+    - 转接板:
+      - parts/boards/index.md
+      - current-only: parts/boards/current-only.md
+      - TTL / USB 转接板 UC-01: parts/boards/datasheet-uc-01.md
+      - TTL / RS232 转接板 UC-02: parts/boards/datasheet-uc-02.md
+      - TTL / RS485 转接板 UC-04: parts/boards/datasheet-uc-04.md
+      - RS485 / USB 转接板 UC-05: parts/boards/datasheet-uc-05.md
+      - UART串行总线舵机分线板 PH8: parts/boards/datasheet-ph8.md
+      - 树莓派总线舵机扩展板 Rasprobo2: parts/boards/datasheet-rasprobo2.md
+      - STM32 多合一主控板开发板 PTC-32: parts/boards/datasheet-ptc-32.md
+    - 舵盘与支架: parts/brackets-horns/horn-bracket-cad.md

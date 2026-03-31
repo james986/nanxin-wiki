@@ -1,0 +1,1919 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Fashionstar Studio V2.0</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+<style>
+  /* === 全局风格 (V6.5 Base) === */
+  :root{ --bg:#F5F6F7; --card:#FFF; --primary:#1A73E8; --danger:#EA4335; --success:#34A853; --warn:#FBBC05; --txt:#202124; --border:#dadce0; }
+  body{ font-family: 'Segoe UI', system-ui, sans-serif; background:var(--bg); color:var(--txt); margin:0; padding:15px; display:flex; flex-direction:column; gap:15px; height:100vh; box-sizing:border-box; }
+  
+  /* 布局通用 */
+  .header { display:flex; justify-content:space-between; align-items:center; background:var(--card); padding:10px 15px; border-radius:12px; border:1px solid var(--border); flex-shrink: 0; }
+  .tab-bar { display:flex; gap:10px; border-bottom: 2px solid var(--border); padding-bottom:0; margin-bottom: 5px; flex-shrink: 0; }
+  .tab-btn { padding: 8px 20px; cursor: pointer; background: #e0e0e0; border-radius: 8px 8px 0 0; font-weight: bold; border:none; color:#666; font-size:13px; }
+  .tab-btn.active { background: var(--primary); color: #fff; }
+  .advanced-tab { display: none; }
+
+  .page-content { display:none; flex:1; overflow:hidden; min-height: 0; }
+  .page-content.active { display:grid; }
+
+  /* Motion Page Layout */
+  #page-motion { grid-template-columns: 460px 1fr; gap:20px; height: 100%; }
+  .panel { background:var(--card); border:1px solid var(--border); border-radius:12px; display:flex; flex-direction:column; overflow:hidden; position: relative; height: 100%; }
+  .panel-head { padding:8px 15px; background:#f8f9fa; border-bottom:1px solid var(--border); font-weight:600; display:flex; flex-direction:column; gap:5px; flex-shrink: 0; }
+  .panel-body { padding:0; overflow-y:auto; flex:1; display:flex; flex-direction:column; } 
+
+  .panel-title-large { font-size: 16px; font-weight: 700; color: #333; }
+
+  .group-bar { display:flex; gap:8px; align-items:center; width:100%; padding-bottom:4px; border-bottom:1px dashed #eee; }
+  .group-select { flex:1; padding:4px; border:1px solid #ccc; border-radius:4px; font-size:13px; font-weight:bold; }
+  .btn-small { padding:2px 8px; font-size:12px; min-width:24px; }
+
+  /* === 画布容器 === */
+  #servoCanvasWrapper {
+      flex: 1; overflow: auto; background: #fafafa; position: relative;
+      background-image: radial-gradient(#ddd 1px, transparent 1px); background-size: 20px 20px; 
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+  }
+  #servoContainer { position: relative; width: 100%; height: 600px; }
+  
+  /* === 极致紧凑卡片 (V4.8 Width 104px) === */
+  .servo-item { 
+      position: absolute; width: 104px; height: 44px;
+      display:flex; flex-direction: column; gap:0px; 
+      border:1px solid #ccc; background: #fff; padding:2px 4px; 
+      border-radius:5px; box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+      transition: background-color 0.4s, border-color 0.4s, box-shadow 0.2s, transform 0.1s; 
+      z-index: 10; user-select: none; font-size: 10px;
+  }
+  
+  .servo-item.draggable { cursor: grab; }
+  .servo-item.draggable:active { cursor: grabbing; box-shadow: 3px 3px 10px rgba(0,0,0,0.2); z-index: 100; transform: scale(1.02); }
+  .servo-item.locked-layout { cursor: default; border-color: #ddd; }
+
+  .servo-item.unlocked { border-left: 3px solid #ccc; border-right: 3px solid #ccc; }
+  body.blink-tick .servo-item.unlocked { 
+      background-color: #fff8e1; border-color: #FBBC05; border-left-color: #FBBC05; border-right-color: #FBBC05; box-shadow: 0 0 5px rgba(251, 188, 5, 0.5);
+  }
+
+  .card-row-top { display: flex; justify-content: space-between; align-items: center; height: 18px; white-space: nowrap; }
+  .card-row-bottom { display: grid; grid-template-columns: 34px 1fr; gap: 3px; align-items: center; height: 22px; margin-top: 1px; }
+
+  /* LED 状态样式 */
+  .led { 
+      width: 8px; height: 8px; border-radius: 50%; 
+      background: #ccc; border: 1px solid #999; 
+      flex-shrink: 0; cursor: help; 
+      transition: all 0.2s;
+  }
+  .led.online { background: var(--success); border-color: #1e8e3e; box-shadow: 0 0 3px var(--success); }
+  .led.err { background: var(--danger); border-color: #b71c1c; box-shadow: 0 0 4px var(--danger); animation: led-flash 0.5s infinite alternate; }
+  .led.checking { background: #bbb; border-color: #888; box-shadow: inset 0 0 2px rgba(0,0,0,0.2); } 
+  @keyframes led-flash { from { opacity: 1; } to { opacity: 0.5; } }
+
+  .servo-id { font-family:monospace; font-weight:bold; color:#333; margin-left: 4px; margin-right: auto; font-size: 10px; }
+  .btn-mini-lock { padding: 0 4px; font-size: 9px; height: 14px; line-height: 12px; border-radius: 3px; min-width: 16px; flex-shrink: 0; }
+  
+  /* Hide Spin Buttons for Compact Numbers */
+  .compact-num::-webkit-inner-spin-button, 
+  .compact-num::-webkit-outer-spin-button,
+  .angle-input-mini::-webkit-inner-spin-button,
+  .angle-input-mini::-webkit-outer-spin-button { 
+      -webkit-appearance: none; margin: 0; 
+  }
+  .compact-num, .angle-input-mini { -moz-appearance: textfield; }
+
+  /* Input Styles */
+  input[type=range] { width: 100%; height: 4px; cursor: pointer; margin: 0; }
+  input[type=number].compact-num { width: 100%; padding: 0; text-align: center; font-size: 10px; border: 1px solid #ddd; border-radius: 2px; font-weight: bold; color: #1A73E8; height: 16px; }
+  input[type=number].compact-num:focus { border-color: var(--primary); outline: none; background: #fff; }
+  .input-changed { background-color: #fff3cd !important; border-color: #ffc107 !important; color: #856404 !important; }
+
+  /* Tables */
+  table { width:100%; border-collapse:collapse; font-size:13px; table-layout: fixed; }
+  th { text-align:left; background:#f1f3f4; padding:8px; position:sticky; top:0; z-index: 10; }
+  td { border-bottom:1px solid #eee; padding:8px; vertical-align: middle; }
+  
+  tr.draggable-source { opacity: 0.4; background: #eee; border: 2px dashed #999; }
+  tr.draggable-over-top { border-top: 3px solid var(--primary); }
+  tr.draggable-over-bottom { border-bottom: 3px solid var(--primary); }
+  #append-zone { height: 40px; background: #f9f9f9; border: 2px dashed #ddd; color: #aaa; text-align: center; font-weight: bold; transition: all 0.2s; cursor: default; }
+  #append-zone.draggable-over { background: #e8f0fe; border-color: var(--primary); color: var(--primary); }
+  .drag-handle { cursor: grab; color: #999; font-size: 16px; margin-right: 8px; font-weight:bold; padding:4px; }
+  
+  .angle-tag { display: inline-flex; align-items: center; background: #f1f3f4; border: 1px solid #e0e0e0; border-radius: 4px; padding: 0px 2px; margin: 1px; font-family: monospace; font-size: 10px; color: #444; flex-shrink: 0; }
+  .angle-tag b { color: #1A73E8; margin-right:1px; }
+  .angle-input-mini { width: 32px; height: 16px; font-size: 10px; padding: 0; border: none; border-bottom: 1px dashed #999; background: transparent; text-align: center; color: #333; font-family: inherit; }
+  .angle-input-mini:focus { outline: none; border-bottom: 1px solid var(--primary); background: #fff; }
+
+  .pose-scroll-view { display: flex; flex-direction: row; overflow-x: auto; width: 100%; align-items: center; padding-bottom: 4px; }
+  .pose-scroll-view::-webkit-scrollbar { height: 6px; }
+  .pose-scroll-view::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+  button { cursor:pointer; padding:6px 12px; border:none; border-radius:6px; background:var(--primary); color:#fff; font-size:13px; transition:0.2s; white-space: nowrap; }
+  button:hover { opacity:0.9; }
+  button:disabled { background:#ccc; cursor:not-allowed; }
+  button.btn-danger { background:var(--danger); }
+  button.btn-success { background:var(--success); }
+  button.btn-warn { background:var(--warn); color:#333; }
+  button.btn-outline { background:transparent; border:1px solid var(--primary); color:var(--primary); }
+  button.btn-outline:hover { background:#e8f0fe; }
+  
+  .status-badge { padding:4px 8px; border-radius:12px; font-size:12px; background:#eee; color:#666; }
+  .status-badge.connected { background:#e6f4ea; color:#1e8e3e; }
+
+  .toolbar { padding:8px; background:#fff; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px; flex-shrink: 0; }
+  .toolbar-row { display:flex; justify-content:space-between; align-items:center; }
+  .toolbar-btn-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+
+  #scanOverlay { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.95); display:none; justify-content:center; align-items:center; font-weight:bold; color:#1A73E8; z-index:999; flex-direction: column; gap:10px; border-radius: 12px; }
+
+  #logConsole { height: 40px; background: #111; color: #0f0; font-family: monospace; font-size: 10px; padding: 5px; overflow-y: auto; border-top: 1px solid #444; white-space: pre-wrap; flex-shrink: 0; line-height: 1.2; }
+
+  #page-control { grid-template-columns: 420px 1fr; gap:20px; height:100%; overflow: hidden; }
+  .control-panel-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+  .control-forms-wrapper { flex: 0 0 auto; max-height: 60%; overflow-y: auto; padding: 15px; border-bottom: 1px solid #eee; }
+  .serial-monitor-wrapper { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; background: #000; }
+  #serialMonitor { flex: 1; overflow-y: auto; padding: 8px; color: #00FF00; font-family: 'Consolas', monospace; font-size: 12px; }
+  .log-tx { color: #00FF00; font-weight:bold; }
+  .log-rx { color: #5bc0de; font-weight:bold; }
+  .log-meta { color: #888; font-size: 11px; margin-left: 8px; }
+
+  #page-param { grid-template-columns: 1fr 1fr; gap:20px; height: 100%; overflow: hidden; }
+  .param-row { display: grid; grid-template-columns: 200px 100px 1fr; gap: 10px; align-items: center; margin-bottom: 8px; padding: 4px; border-bottom: 1px dashed #eee; }
+  .adv-alert { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 15px; }
+  .ctrl-mode-tabs { display:flex; gap:5px; overflow-x:auto; padding-bottom:5px; margin-bottom:10px; border-bottom:1px solid #eee; }
+  .ctrl-mode-tab { padding:6px 12px; font-size:12px; white-space:nowrap; border:1px solid #ddd; border-radius:15px; background:#fff; cursor:pointer; }
+  .ctrl-mode-tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .ctrl-form { display:flex; flex-direction:column; gap:12px; }
+  .ctrl-row { display:grid; grid-template-columns: 100px 1fr; align-items:center; gap:10px; }
+  .ctrl-row label { font-size:13px; text-align:right; color:#555; }
+  .sync-list { max-height: 200px; overflow-y: auto; border:1px solid #eee; margin:10px 0; border-radius:6px; }
+  .sync-item { display:flex; gap:5px; padding:5px; align-items:center; border-bottom:1px solid #f5f5f5; font-size:12px; }
+  #chartContainer { position: relative; flex:1; width:100%; min-height: 0; }
+  
+  /* 原点与重置按钮样式调整 */
+  #btnSetGlobalOrigin { background: #607d8b; color: white; margin-top: 0; flex: 1; }
+  #btnSetGlobalOrigin:hover { background: #455a64; }
+  #btnResetMultiTurnGlobal { background: #ff9800; color: white; margin-top: 0; flex: 1; }
+  #btnResetMultiTurnGlobal:hover { background: #e65100; }
+  
+  #page-interpret { grid-template-columns: 1fr; height:100%; overflow:hidden; display:none; }
+  #page-interpret.active { display:flex; flex-direction:column; gap:20px; }
+  .interpret-input { width:100%; height:120px; padding:15px; font-family:'Consolas', monospace; font-size:14px; border:1px solid #ccc; border-radius:8px; resize:none; box-sizing:border-box; }
+  .interpret-result { flex:1; background:#f8f9fa; border:1px solid #eee; border-radius:8px; padding:20px; overflow-y:auto; font-family:'Segoe UI', sans-serif; line-height:1.6; }
+  .packet-part { margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed #ddd; }
+  .packet-label { font-weight:bold; color:#555; display:inline-block; width:120px; }
+  .packet-val { color:#1A73E8; font-weight:bold; }
+  .sub-packet { margin-left: 20px; border-left: 2px solid #ddd; padding-left: 10px; margin-top:5px; }
+  
+  /* ========================================================== */
+  /* === Diagnosis Page Styles (Optimized Compact) === */
+  /* ========================================================== */
+  #page-diagnosis { grid-template-columns: 1fr; height:100%; overflow: hidden; display: none; }
+  #page-diagnosis.active { display: flex; flex-direction: column; gap:10px; }
+  
+  /* Diagnosis Toolbar */
+  .diag-toolbar {
+      display: flex; gap: 8px; align-items: center; padding: 6px 10px;
+      background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px;
+      flex-shrink: 0; font-size: 12px; flex-wrap: wrap; 
+  }
+  
+  /* ID Modification Box */
+  .id-change-box { display: flex; align-items: center; gap: 5px; background: #fff8e1; padding: 2px 8px; border-radius: 4px; border: 1px solid #ffe0b2; margin-left: auto; }
+  .id-input { width: 35px; text-align: center; border: 1px solid #ccc; border-radius: 3px; padding: 2px; font-weight: bold; font-size: 11px; }
+
+  /* Diagnosis Table Grid */
+  .diag-grid-container {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr; /* 左右两栏 */
+      gap: 5px; overflow-y: auto; padding: 2px;
+  }
+  .diag-column { display: flex; flex-direction: column; gap: 1px; }
+
+  /* Grid Column Definition */
+  .diag-row-layout {
+      display: grid;
+      /* Columns: ID, Comm, Angle, Volt, Curr, Power, Temp, Model, Ver, Status, Control(280px) */
+      grid-template-columns: 25px 30px 45px 35px 35px 35px 30px 35px 35px 50px 280px;
+      align-items: center; text-align: center; gap: 2px;
+  }
+
+  .diag-header {
+      font-size: 11px; font-weight: bold; background: #eee; padding: 4px 2px;
+      border-radius: 4px; position: sticky; top: 0; z-index: 5;
+      border-bottom: 1px solid #ddd;
+  }
+  
+  .diag-row {
+      font-size: 11px; padding: 0 2px; border-bottom: 1px solid #eee; background: #fff; 
+      height: 24px; /* Compact Row Height */
+  }
+  
+  .diag-row.diag-offline { opacity: 0.5; background: #fdfdfd; }
+  .diag-row.diag-error { background: #ffebee; }
+  .diag-val-text { font-family: monospace; color: #333; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+  .diag-status-tag { display:inline-block; padding:0 4px; border-radius:3px; font-size:9px; font-weight:bold; color:#fff; min-width: 24px; text-align:center; height: 16px; line-height: 16px; }
+  .diag-status-ok { background:var(--success); }
+  .diag-status-err { background:var(--danger); }
+  .diag-status-offline { background:#ccc; color:#666; }
+
+  /* In-Row Controls (New in V1.01) */
+  .row-ctrl-group { display: flex; align-items: center; justify-content: center; gap: 3px; height: 100%; }
+  .row-ctrl-input { 
+      width: 45px; height: 18px; font-size: 11px; text-align: center; 
+      border: 1px solid #ccc; border-radius: 2px; font-family: monospace; font-weight: bold; color: var(--primary);
+  }
+  .row-ctrl-input:focus { border-color: var(--primary); outline: none; background: #fff; }
+  
+  .btn-mini-go {
+      padding: 0 6px; height: 20px; line-height: 18px; font-size: 10px; background: var(--primary); color: white;
+      border-radius: 2px; border:none; cursor: pointer;
+  }
+  .btn-mini-go:hover { background: #1669bb; }
+  
+  .btn-mini-reset-turn {
+      padding: 0 5px; height: 20px; line-height: 18px; font-size: 10px; background: #ff9800; color: white;
+      border-radius: 2px; border:none; cursor: pointer;
+  }
+  .btn-mini-reset-turn:hover { background: #f57c00; }
+
+  .btn-mini-reset-zero {
+      padding: 0 5px; height: 20px; line-height: 18px; font-size: 10px; background: #d32f2f; color: white;
+      border-radius: 2px; border:none; cursor: pointer;
+  }
+  .btn-mini-reset-zero:hover { background: #b71c1c; }
+
+  .diag-footer-msg {
+      padding: 2px 10px; background: #f1f3f4; color: #555;
+      font-size: 10px; text-align: center; font-weight: bold;
+      border-top: 1px solid #ddd;
+  }
+
+  /* Specific Monitor Style for Diagnosis Page (Matched V1.01) */
+  .diag-serial-monitor { height: 120px; display: flex; flex-direction: column; background: #000; border-radius: 8px; border:1px solid #666; overflow: hidden; flex-shrink: 0; }
+  .monitor-header { background:#333; color:#fff; padding:2px 10px; font-size:11px; display:flex; justify-content:space-between; align-items:center; }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex; align-items:center; gap:15px;">
+    <h3 style="margin:0;">🤖 Fashionstar Studio V2.0</h3>
+    <div style="width:1px; height:24px; background:var(--border); margin:0 5px;"></div>
+    <select id="baudRate" style="padding:6px; border-radius:6px; border:1px solid var(--border);">
+      <option value="115200" selected>115200 (默认)</option>
+      <option value="1000000">1000000 (1M)</option>
+      <option value="500000">500000</option>
+      <option value="250000">250000</option>
+      <option value="57600">57600</option>
+      <option value="38400">38400</option>
+      <option value="19200">19200</option>
+      <option value="9600">9600</option>
+    </select>
+    <button id="btnConnect">🔌 连接串口</button>
+    <button id="btnDisconnect" class="btn-danger" disabled>❌ 断开</button>
+    <span id="connectionStatus" class="status-badge">未连接</span>
+  </div>
+  <div style="display:flex; align-items:center; gap:15px;">
+    <button id="btnDebugMode" class="btn-small" style="background:#607d8b; color:white;">🛠️ 深度调试</button>
+    <div style="font-size:12px; color:#666;">
+        <span id="global-rx-counter">RX: 0</span> | <span id="global-tx-counter">TX: 0</span>
+    </div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('motion')">动作编辑 (Motion)</button>
+  <button class="tab-btn advanced-tab" onclick="switchTab('param')">参数设定 (Params)</button>
+  <button class="tab-btn advanced-tab" onclick="switchTab('control')">在线控制 (Control)</button>
+  <button class="tab-btn advanced-tab" onclick="switchTab('interpret')">协议解析 (Interpret)</button>
+  <button class="tab-btn advanced-tab" onclick="switchTab('diagnosis')">系统诊断 (Diagnosis)</button>
+</div>
+
+<div id="page-motion" class="page-content active">
+  <div class="panel">
+    <div id="scanOverlay"><div style="font-size:24px;">🔄</div><div id="scanText">正在初始化...</div></div>
+    
+    <div class="panel-head">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <span class="panel-title-large" style="margin-top: 5px;">实时姿态</span>
+        
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;"> 
+            <div style="display:flex; gap:5px; justify-content: flex-end;">
+              <button id="btnLockLayout" class="btn-outline btn-small" onclick="toggleLayoutLock()" title="锁定/解锁卡片位置">🔓 布局: 解锁</button>
+              <button id="btnRescan" class="btn-outline btn-small" title="重新扫描总线">🔄 扫描</button>
+              <button id="btnCheckHealth" class="btn-outline btn-small" title="检查堵转、过压等状态">🏥 检查</button>
+              <button id="btnReadAll" class="btn-outline btn-small" title="读取当前角度">📥 单次读取</button>
+            </div>
+            <div style="display:flex; gap:5px; margin-top:6px; width:100%;">
+                <button id="btnResetMultiTurnGlobal" class="btn-small" title="重置多圈圈数">↺ 重置圈数</button>
+                <button id="btnSetGlobalOrigin" class="btn-small" title="警告：设定所有设备原点">🎯 设为原点</button>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-body">
+      <div id="servoCanvasWrapper">
+          <div id="servoContainer">
+            <div style="color:#999; text-align:center; padding:50px;">请连接串口并扫描...</div>
+          </div>
+      </div>
+    </div>
+    <div id="logConsole">System Ready.</div>
+    
+    <div class="toolbar">
+      <div class="toolbar-row">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <label style="font-size:12px;">实时同步: <input type="checkbox" id="chkRealtime" checked></label>
+          <label style="font-size:12px; display:flex; align-items:center; gap:5px;">
+              <span>⚡ 速度:</span>
+              <select id="rtSpeed" style="padding:2px; font-size:12px; border-radius:4px; border:1px solid #ccc;">
+                  <option value="0">🚀 高速</option>
+                  <option value="500" selected>🚙 中速</option>
+                  <option value="1000">🐢 低速</option>
+              </select>
+          </label>
+        </div>
+        
+        <div style="display:flex; align-items:center; gap:5px;">
+          <span style="font-size:12px; color:#666; font-weight:bold;">解锁模式:</span>
+          <select id="unlockMode" onchange="toggleUnlockParams()" style="padding:2px; font-size:12px;">
+              <option value="0x10">停止卸力 (Free)</option>
+              <option value="0x12">停止阻尼 (Damp)</option>
+          </select>
+          <input type="number" id="unlockPower" value="500" placeholder="阻尼值" style="width:60px; display:none; font-size:12px; padding:2px;">
+        </div>
+      </div>
+
+      <div class="toolbar-btn-grid">
+        <button id="btnTorqueOn" class="btn-success" style="font-size:12px;">🔒 全部锁定</button>
+        <button id="btnTorqueOff" class="btn-danger" style="font-size:12px;">🔓 全部解锁</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="group-bar">
+        <span style="font-size:12px;">动作组:</span>
+        <select id="groupSelect" class="group-select"></select>
+        <button id="btnAddGroup" class="btn-small" title="新建组">➕</button>
+        <button id="btnRenameGroup" class="btn-small" title="重命名">✎</button>
+        <button id="btnDelGroup" class="btn-danger btn-small" title="删除组">🗑</button>
+      </div>
+      <div class="playback-controls" style="margin-top:5px; display:flex; justify-content:space-between; align-items:center; width:100%;">
+        <span style="font-size:12px; color:#666;">动作序列 (按住☰拖动排序)</span>
+        <div>
+          <button id="btnPlay">▶ 播放</button>
+          <button id="btnLoop" class="btn-outline">🔁 循环: 关</button>
+          <button id="btnStop" class="btn-danger">⏹ 停止</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body" style="padding:0; overflow-y: auto;">
+      <table id="actionTable">
+        <thead>
+          <tr>
+            <th style="width:50px;">#</th>
+            <th>姿态数据 (Dynamic)</th>
+            <th style="width:70px;">时间(ms)</th>
+            <th style="width:70px;">间隔(ms)</th>
+            <th style="width:90px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="actionListBody"></tbody>
+        <tfoot style="display:table-header-group">
+            <tr id="append-zone" ondragover="dragOverAppend(event)" ondrop="dragDropAppend(event)">
+                <td colspan="5">⏬ 拖拽至此处添加到底部 ⏬</td>
+            </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="toolbar" style="flex-direction:row; justify-content:flex-start;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <label style="font-size:12px;">动作时间: <input type="number" id="defTime" value="300" style="width:50px"></label>
+        <label style="font-size:12px;">间隔时间: <input type="number" id="defDelay" value="500" style="width:50px"></label>
+      </div>
+      <div style="margin-left:auto; display:flex; gap:5px;">
+        <button id="btnAddFrame">➕ 添加当前</button>
+        <button id="btnExport" class="btn-outline">💾 导出(JSON)</button>
+        <button id="btnImport" class="btn-outline">📂 导入</button>
+      </div>
+      <input type="file" id="fileInput" style="display:none" accept=".json">
+    </div>
+  </div>
+</div>
+
+<div id="page-param" class="page-content">
+  <div class="panel">
+    <div class="panel-head">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span>⚙️ 基本参数设定 (4.2.2)</span>
+          <div style="display:flex; gap:5px;">
+              <button class="btn-small btn-outline" onclick="exportParamsINI()">📤 导出配置(.ini)</button>
+              <button class="btn-small btn-outline" onclick="document.getElementById('paramFileInput').click()">📂 导入配置</button>
+              <input type="file" id="paramFileInput" style="display:none" accept=".ini" onchange="importParamsINI(this)">
+          </div>
+      </div>
+      <div style="margin-top:5px; display:flex; gap:5px; align-items:center;">
+        <span style="font-size:12px; font-weight:bold;">目标 ID:</span>
+        <input type="number" id="param_target_id" placeholder="ID" value="0" min="0" max="24" style="width:50px" onchange="validateID(this)">
+        <button class="btn-small" onclick="readBasicParams()">📥 读取所有</button>
+        <button class="btn-small btn-success" onclick="saveBasicParams()">💾 写入修改</button>
+      </div>
+    </div>
+    <div class="panel-body" id="basicParamsContainer"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span>🛡️ 进阶参数设定 (5.4 Protected)</span>
+      <div style="margin-top:5px;">
+        <button class="btn-small" onclick="readAdvancedParams()">📥 读取进阶 (Batch)</button>
+        <button class="btn-small btn-danger" onclick="writeAdvancedParams()">💾 写入进阶 (Batch)</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="adv-alert">
+        注意：修改PID等参数可能导致舵机震荡或损坏。这些参数使用特殊协议头(0x13, 0x4D)进行批次读写。
+        <b>写入前请务必先读取！</b>
+      </div>
+      <div id="advParamsContainer"></div>
+    </div>
+  </div>
+</div>
+
+<div id="page-control" class="page-content">
+  <div class="panel control-panel-container">
+    <div class="panel-head">
+        <div class="ctrl-mode-tabs">
+            <div class="ctrl-mode-tab active" onclick="setCtrlMode(1)">单舵机</div>
+            <div class="ctrl-mode-tab" onclick="setCtrlMode(2)">多舵机(同步)</div>
+            <div class="ctrl-mode-tab" onclick="setCtrlMode(3)">多舵机(异步)</div>
+        </div>
+    </div>
+    
+    <div class="control-forms-wrapper">
+        <div id="ctrl-section-single">
+            <div class="ctrl-row" style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                <label><b>目标 ID:</b></label>
+                <input type="number" id="sc_id" value="0" min="0" max="24" style="width:60px" onchange="validateID(this)">
+            </div>
+            <select id="singleModeSelect" style="width:100%; margin-bottom:15px; font-weight:bold" onchange="renderSingleForm()">
+                <option value="0x0B">1. 基于时间单圈 (0x0B)</option>
+                <option value="0x0C">2. 基于速度单圈 (0x0C)</option>
+                <option value="0x0D">3. 简单多圈 (0x0D)</option>
+                <option value="0x0E">4. 基于时间多圈 (0x0E)</option>
+                <option value="0x0F">5. 基于速度多圈 (0x0F)</option>
+                <option value="0x18">6. 停止模式 (0x18)</option>
+                <option value="0x09">7. 阻尼模式 (0x09)</option>
+                <option value="0x17">8. 原点设定 (0x17)</option>
+                <option value="0x11">9. 重设多圈 (0x11)</option>
+            </select>
+            <div id="singleFormContainer" class="ctrl-form"></div>
+            <button class="btn-success" style="width:100%; margin-top:20px; padding:10px;" onclick="sendSingleCommand()">🚀 发送指令</button>
+        </div>
+
+        <div id="ctrl-section-sync" style="display:none;">
+            <div class="adv-alert" style="margin-bottom:10px;">
+                构建同步包 (0x19)，所有舵机将同时执行。请先选择子模式，添加舵机，最后发送。
+            </div>
+            <label style="font-size:12px; font-weight:bold;">同步子模式:</label>
+            <select id="syncModeSelect" style="width:100%; margin-bottom:10px;" onchange="renderSyncInputRow()">
+                <option value="0x0B">0x0B 基于时间单圈</option>
+                <option value="0x0C">0x0C 基于速度单圈</option>
+                <option value="0x0E">0x0E 基于时间多圈</option>
+                <option value="0x0F">0x0F 基于速度多圈</option>
+            </select>
+            <div style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #eee;">
+                <div style="font-size:12px; font-weight:bold; margin-bottom:5px;">添加条目:</div>
+                <div id="syncInputRow" class="ctrl-form" style="gap:5px;"></div>
+                <button class="btn-outline btn-small" style="width:100%; margin-top:8px;" onclick="addSyncItem()">+ 添加到列表</button>
+            </div>
+            <div class="sync-list" id="syncList"><div style="padding:10px; color:#999; text-align:center">列表为空</div></div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-danger" style="flex:1" onclick="clearSyncList()">清空</button>
+                <button class="btn-success" style="flex:2" onclick="sendSyncPacket()">🚀 发送同步包</button>
+            </div>
+        </div>
+
+        <div id="ctrl-section-async" style="display:none;">
+             <div class="adv-alert">
+                异步流程：<br>
+                1. 点击 [开始缓存] (舵机进入缓存模式)<br>
+                2. 切换到 [单舵机] 界面，发送任意运动指令 (不会立即动)<br>
+                3. 回到此界面，点击 [执行异步] (所有舵机同时动)
+            </div>
+            <div style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
+                <button class="btn-outline" style="padding:15px; font-weight:bold" onclick="sendAsyncCmd(0x12)">1️⃣ 开始缓存 (BeginAsync 0x12)</button>
+                <div style="text-align:center; font-size:12px; color:#666;">↓ 在此期间发送单机指令 ↓</div>
+                <button class="btn-success" style="padding:15px; font-weight:bold" onclick="sendAsyncCmd(0x13, 0)">2️⃣ 执行异步 (EndAsync 0 Exec)</button>
+                <button class="btn-danger" onclick="sendAsyncCmd(0x13, 1)">❌ 取消缓存 (EndAsync 1 Cancel)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="serial-monitor-wrapper">
+        <div style="background:#333; color:#fff; padding:4px 10px; font-size:11px; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0;">
+            <span>串口监视器 (Serial Monitor)</span>
+            <button class="btn-small btn-danger" onclick="document.getElementById('serialMonitor').innerHTML=''">清空</button>
+        </div>
+        <div id="serialMonitor">
+            <div style="color:#666; text-align:center;">--- 等待指令 ---</div>
+        </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span>📈 实时数据监控</span>
+        <div>
+           <label>ID:<input type="number" id="mon_id" value="0" min="0" max="24" style="width:40px; margin-right:5px;" onchange="validateID(this)"></label>
+           <button id="btnStartMonitor" class="btn-success btn-small">▶</button>
+           <button id="btnStopMonitor" class="btn-danger btn-small">⏹</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body" style="display:flex; flex-direction:column;">
+      <div style="display:grid; grid-template-columns: repeat(6, 1fr); gap:6px; text-align:center; margin-bottom:10px;">
+        <div style="background:#f3e5f5; padding:6px; border-radius:6px;">
+          <div style="font-size:11px; color:#666">角度</div><div id="val_angle" style="font-weight:bold; color:#9c27b0; font-size:13px">0.0°</div>
+        </div>
+        <div style="background:#e8f0fe; padding:6px; border-radius:6px;">
+          <div style="font-size:11px; color:#666">电压</div><div id="val_volt" style="font-weight:bold; color:#1A73E8; font-size:13px">0 V</div>
+        </div>
+        <div style="background:#e6f4ea; padding:6px; border-radius:6px;">
+          <div style="font-size:11px; color:#666">电流</div><div id="val_curr" style="font-weight:bold; color:#34A853; font-size:13px">0 A</div>
+        </div>
+        <div style="background:#fef7e0; padding:6px; border-radius:6px;">
+          <div style="font-size:11px; color:#666">功率</div><div id="val_pow" style="font-weight:bold; color:#FBBC05; font-size:13px">0 W</div>
+        </div>
+        <div style="background:#fce8e6; padding:6px; border-radius:6px;">
+          <div style="font-size:11px; color:#666">温度</div><div id="val_temp" style="font-weight:bold; color:#EA4335; font-size:13px">0 °C</div>
+        </div>
+         <div style="background:#f1f3f4; padding:6px; border-radius:6px;">
+          <div style="font-size:11px; color:#666">Status</div><div id="val_status" style="font-weight:bold; color:#5f6368; font-size:13px">0x00</div>
+        </div>
+      </div>
+      <div id="chartContainer">
+        <canvas id="monitorChart"></canvas>
+      </div>
+      <div style="text-align:center; font-size:11px; color:#999; margin-top:5px;">
+        提示：鼠标悬停查看曲线数值，支持滚轮缩放 | <button class="btn-small btn-outline" onclick="window.monitorChart.resetZoom()">重置视图</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-interpret" class="page-content">
+    <div class="panel">
+        <div class="panel-head">📖 串口数据协议解释器</div>
+        <div class="panel-body" style="display:flex; flex-direction:column; gap:10px;">
+            <div class="adv-alert">
+                输入十六进制数据（如：<code>12 4C 0B 01 ...</code>），点击解析查看详细含义。支持自动忽略 "TX/RX" 前缀。
+            </div>
+            <textarea id="interpretInput" class="interpret-input" placeholder="请在此粘贴串口数据..."></textarea>
+            <button class="btn-success" onclick="parseInputData()">⚡ 深度解析 (Parse)</button>
+            <div id="interpretResult" class="interpret-result">
+                <div style="color:#999; text-align:center">暂无解析结果</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="page-diagnosis" class="page-content">
+    <div class="panel" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+        <div class="diag-toolbar">
+            <span style="font-weight:bold; color:#333;">操作栏:</span>
+            <button class="btn-success" onclick="startDiagnosis(false)">▶ 单次扫描</button>
+            <button class="btn-danger" id="btnDiagMonitor" onclick="toggleMonitor()">🔴 自动循环监控</button>
+            <button class="btn-danger" id="btnDiagStop" style="display:none;" onclick="toggleMonitor()">⏹ 停止监控</button>
+            
+            <div style="width:1px; height:16px; background:#ddd; margin:0 2px;"></div>
+            
+            <button class="btn-outline" onclick="readModelVer()">🆔 读取型号/版本</button>
+            <button class="btn-outline" onclick="setDiagTorque(true)">🔒 全部锁力</button>
+            <button class="btn-outline" onclick="setDiagTorque(false)">🔓 全部卸力</button>
+
+            <div class="id-change-box">
+                <span style="font-size:11px; font-weight:bold; color:#e65100;">🆔修改:</span>
+                <input type="number" id="id_mod_cur" class="id-input" placeholder="原ID" min="0" max="253">
+                <span style="font-size:11px; color:#666;">➡</span>
+                <input type="number" id="id_mod_tgt" class="id-input" placeholder="新ID" min="0" max="253">
+                <button class="btn-warn" onclick="changeServoID()" style="padding: 2px 6px;">确认</button>
+            </div>
+        </div>
+
+        <div class="diag-grid-container">
+            <div class="diag-column" id="diag-col-1">
+                <div class="diag-header diag-row-layout">
+                    <div>ID</div><div>通信</div><div>角度</div><div>电压</div><div>电流</div><div>功率</div><div>温度</div><div>型号</div><div>版本</div><div>状态</div><div>单机运动控制</div>
+                </div>
+                <div id="diag-rows-left"></div>
+            </div>
+            <div class="diag-column" id="diag-col-2">
+                <div class="diag-header diag-row-layout">
+                    <div>ID</div><div>通信</div><div>角度</div><div>电压</div><div>电流</div><div>功率</div><div>温度</div><div>型号</div><div>版本</div><div>状态</div><div>单机运动控制</div>
+                </div>
+                <div id="diag-rows-right"></div>
+            </div>
+        </div>
+        
+        <div id="diagFooter" class="diag-footer-msg">
+            请连接串口后点击“扫描”或“监控”
+        </div>
+    </div>
+    
+    <div class="diag-serial-monitor">
+        <div class="monitor-header">
+            <span>📋 诊断专用监视器</span>
+            <button class="btn-small btn-danger" onclick="document.getElementById('diagSerialMonitor').innerHTML=''" style="padding:1px 6px; font-size:10px;">清空</button>
+        </div>
+        <div id="diagSerialMonitor" style="flex: 1; overflow-y: auto; padding: 2px 5px; color: #00FF00; font-family: 'Consolas', monospace; font-size: 11px; line-height: 1.2;">
+            <div style="color:#666; text-align:center;">--- 等待指令 ---</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// === 核心工具函数 ===
+let port = null, writer = null, reader = null;
+let isConnected = false, keepReading = false;
+let rxBuffer = [];
+let txCount = 0, rxCount = 0;
+
+const sum8 = arr => { let s=0; for(const b of arr) s=(s+b)&0xFF; return s; };
+const U8 = v => [v&0xFF];
+const S16 = v => { const val = Math.round(v); return [val&0xFF, (val>>8)&0xFF]; };
+const U16 = v => [v&0xFF, (v>>8)&0xFF];
+const S32 = v => { const val = Math.round(v); return [val&0xFF, (val>>8)&0xFF, (val>>16)&0xFF, (val>>24)&0xFF]; };
+const U32 = v => { const val = Math.round(v)>>>0; return [val&0xFF, (val>>8)&0xFF, (val>>16)&0xFF, (val>>24)&0xFF]; };
+const angleToRaw = deg => Math.round(deg * 10);
+const rawToAngle = raw => { let val = raw; if(val & 0x8000) val = val - 0x10000; return parseFloat((val / 10).toFixed(1)); };
+
+// NTC Helper Functions
+const NTC_B = 3435; const NTC_T0 = 298.15; const NTC_R1 = 10000;
+function adcToTemp(adc) {
+    if(adc <= 0 || adc >= 4096) return 0;
+    const Rt = NTC_R1 * adc / (4096 - adc);
+    return Math.round(1/(Math.log(Rt/NTC_R1)/NTC_B + 1/NTC_T0) - 273.15);
+}
+function tempToAdc(temp) {
+    const K = temp + 273.15;
+    const Rt = NTC_R1 * Math.exp(NTC_B * (1/K - 1/NTC_T0));
+    return Math.round(4096 * Rt / (NTC_R1 + Rt));
+}
+
+const CMD_NAMES = {
+    0x01: "Ping (通讯检测)",
+    0x02: "ResetUserData (重设用户资料)",
+    0x03: "ReadData (读取资料)",
+    0x04: "WriteData (写入资料)",
+    0x05: "ReadBatchData (读取批次)",
+    0x06: "WriteBatchData (写入批次)",
+    0x0A: "ReadAngle (读角度)",
+    0x0B: "MoveTime (指定时间运动)",
+    0x0C: "MoveSpeed (指定速度运动)",
+    0x0D: "MoveMultiTurn (多圈时间)",
+    0x0E: "MoveMultiTurnEx (多圈加减速)",
+    0x0F: "MoveMultiTurnSpd (多圈速度)",
+    0x16: "ReadMonitor (数据监控回传)",
+    0x17: "SetZero/Origin (设零点)",
+    0x18: "Stop/Torque (停止/锁力)",
+    0x19: "SyncWrite (同步写)",
+    0x10: "ReadMultiTurn (读多圈)",
+    0x11: "ResetMultiTurn (重设多圈)",
+    0xC4: "WriteProtectBatch (写保护)",
+    0xC5: "ReadProtectBatch (读保护)"
+};
+
+function buildPacket(cmd, content, isProtected = false) {
+    const header = isProtected ? [0x13, 0x4D] : [0x12, 0x4C];
+    const len = content.length;
+    const body = [...header, cmd, len, ...content];
+    const checksum = sum8(body);
+    return new Uint8Array([...body, checksum]);
+}
+
+function log(msg, cls) {
+    const c = document.getElementById('logConsole');
+    if(!c) return;
+    const d = document.createElement('div');
+    d.className = cls || '';
+    d.innerText = `[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`;
+    c.appendChild(d);
+    c.scrollTop = c.scrollHeight;
+    if(c.children.length > 50) c.removeChild(c.firstChild);
+}
+
+// Updated logCtrl to support dual monitors (Control Page & Diagnosis Page)
+function logCtrl(type, bytes) {
+    const hex = Array.from(bytes).map(b=>b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+    let desc = "";
+    if (bytes.length > 4) {
+        const cmd = bytes[2];
+        desc = CMD_NAMES[cmd] || `Cmd 0x${cmd.toString(16).toUpperCase()}`;
+        if(cmd === 0x19) desc += ` [同步 ${bytes[4]} 设备]`; 
+        else if(bytes.length >= 5 && (bytes[0]===0x12 || bytes[0]===0x05 || bytes[0]===0x13)) {
+             desc += ` [ID:${bytes[4]}]`; 
+        }
+    }
+    
+    const html = `<span class="${type==='TX'?'log-tx':'log-rx'}">${type}:</span> ${hex} <span class="log-meta">// ${desc}</span>`;
+    
+    // Target 1: Original Control Page Monitor
+    const c1 = document.getElementById('serialMonitor');
+    if(c1) {
+        const d1 = document.createElement('div');
+        d1.innerHTML = html;
+        c1.appendChild(d1);
+        c1.scrollTop = c1.scrollHeight;
+        if(c1.children.length > 100) c1.removeChild(c1.firstChild);
+    }
+    
+    // Target 2: New Diagnosis Page Monitor
+    const c2 = document.getElementById('diagSerialMonitor');
+    if(c2) {
+        const d2 = document.createElement('div');
+        d2.innerHTML = html;
+        c2.appendChild(d2);
+        c2.scrollTop = c2.scrollHeight;
+        if(c2.children.length > 100) c2.removeChild(c2.firstChild);
+    }
+}
+
+window.switchTab = (tabName) => {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick="switchTab('${tabName}')"]`).classList.add('active');
+  document.getElementById(`page-${tabName}`).classList.add('active');
+  if(tabName === 'diagnosis') { document.getElementById('page-diagnosis').classList.add('active'); renderDiagTable(); }
+  if(tabName === 'control') { renderSingleForm(); renderSyncInputRow(); if(window.monitorChart) window.monitorChart.resize(); }
+};
+
+document.getElementById('btnDebugMode').onclick = () => {
+    const p = prompt("请输入深度调试密码:");
+    if(p === "2468"){
+        document.querySelectorAll('.advanced-tab').forEach(el => el.style.display = 'block');
+        document.getElementById('btnDebugMode').style.display = 'none'; 
+        alert("深度调试模式已解锁");
+    } else {
+        if(p !== null) alert("密码错误");
+    }
+};
+
+window.validateID = (el) => {
+    let val = parseInt(el.value);
+    if(isNaN(val)) val = 0;
+    if(val < 0) val = 0;
+    if(val > 24) val = 24;
+    el.value = val;
+};
+
+setInterval(() => {
+    document.body.classList.toggle('blink-tick');
+}, 800);
+
+// === Serial Core ===
+async function connectSerial() {
+    if (port) return;
+    try {
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: parseInt(document.getElementById('baudRate').value) });
+        writer = port.writable.getWriter();
+        keepReading = true; rxBuffer = []; readLoop(); 
+        isConnected = true; updateConnectionUI(true);
+        setTimeout(() => { if(document.getElementById('page-motion').classList.contains('active')) startIntervalScan(); }, 800);
+        log("Connected.", "log-sys");
+    } catch (e) { if (!e.message.includes("No port selected")) alert("连接失败: " + e.message); disconnectSerial(); }
+}
+
+async function disconnectSerial() {
+    keepReading = false;
+    if (teachingTimer) clearInterval(teachingTimer);
+    if (scanInterval) clearInterval(scanInterval);
+    if (monitorTimer) clearInterval(monitorTimer);
+    if (diagMonitorTimer) clearInterval(diagMonitorTimer);
+    
+    // Release Reader Lock
+    try { 
+        if(reader) {
+            await reader.cancel(); 
+            reader.releaseLock(); 
+        }
+    } catch(e){}
+    
+    // Release Writer Lock
+    try { 
+        if(writer) {
+            writer.releaseLock();
+        }
+    } catch(e){}
+    
+    // Close Port
+    try { 
+        if(port) await port.close(); 
+    } catch(e){}
+    
+    port = null; writer = null; reader = null;
+    isConnected = false; updateConnectionUI(false);
+    log("Disconnected.", "log-err");
+}
+
+function updateConnectionUI(con) {
+    document.getElementById('connectionStatus').innerText = con ? "已连接" : "已断开";
+    document.getElementById('connectionStatus').className = "status-badge " + (con?"connected":"");
+    document.getElementById('btnConnect').disabled = con;
+    document.getElementById('btnDisconnect').disabled = !con;
+    if(document.getElementById('btnRescan')) document.getElementById('btnRescan').disabled = !con;
+}
+
+function sendBytesNoWait(bytes) {
+    if (!writer) return;
+    logCtrl('TX', bytes); 
+    
+    writer.write(bytes).catch(e => {
+        console.error("TX Error:", e);
+        if (e.message && (e.message.includes("The device has been lost") || e.message.includes("NetworkError"))) {
+             log("Write Failed: Device lost.", "log-err");
+             disconnectSerial();
+        }
+    });
+
+    txCount += bytes.length; 
+    const counterEl = document.getElementById('global-tx-counter');
+    if(counterEl) counterEl.innerText = `TX: ${txCount}`;
+}
+
+async function readLoop() {
+    try {
+        reader = port.readable.getReader();
+        while (keepReading) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value) { 
+                rxCount += value.length; 
+                document.getElementById('global-rx-counter').innerText = `RX: ${rxCount}`; 
+                processBuffer(value); 
+            }
+        }
+    } catch (e) { 
+        console.error("Read Loop Error:", e); 
+        disconnectSerial();
+    } finally { 
+        if(reader) {
+             try { reader.releaseLock(); } catch(e){}
+        }
+    }
+}
+
+function processBuffer(value) {
+    rxBuffer.push(...value);
+    while (true) {
+        let headIdx = -1;
+        for(let i=0; i<rxBuffer.length-1; i++){ if((rxBuffer[i]===0x05 && rxBuffer[i+1]===0x1C) || (rxBuffer[i]===0x12 && rxBuffer[i+1]===0x4C)) { headIdx=i; break; } }
+        if(headIdx === -1) { if(rxBuffer.length>200) rxBuffer=[]; else if(rxBuffer.length>0) rxBuffer=[rxBuffer[rxBuffer.length-1]]; break; }
+        if(headIdx > 0) rxBuffer.splice(0, headIdx);
+        if(rxBuffer.length < 4) break; 
+        const len = rxBuffer[3];
+        if(rxBuffer.length < 4+len+1) break;
+        const packet = rxBuffer.slice(0, 4+len+1);
+        rxBuffer.splice(0, 4+len+1);
+        logCtrl('RX', packet); 
+        handlePacket(packet[2], packet.slice(4, 4+len));
+    }
+}
+function handlePacket(cmd, content) {
+    if (content.length < 1) return;
+    const id = content[0];
+
+    // Priority Check: If Diagnosis page is active, route to Diagnosis Handler
+    if ((window.isDiagnosing || document.getElementById('page-diagnosis').classList.contains('active')) && window.onDiagPacket) {
+        window.onDiagPacket(id, cmd, content);
+    }
+
+    if (cmd === 0x03) {
+        if(window.awaitingParamRead && window.awaitingParamRead.id === id && window.onParamData) window.onParamData(id, content[1], content.slice(2));
+        if (content[1] === 5 && content.length >= 3) updateServoStatusUI(id, content[2]);
+    }
+    if (cmd === 0x0A && content.length >= 3) {
+        const angle = rawToAngle(content[1] | (content[2] << 8));
+        if (window.isScanning) { if (!foundServosMap.has(id)) foundServosMap.set(id, { id, angle, locked: true }); }
+        else updateServoUI(id, angle);
+    }
+    if (cmd === 0x01 && window.isScanning && !foundServosMap.has(id)) foundServosMap.set(id, { id, angle: 0, locked: true });
+    if (cmd === 0x16 && content.length >= 10) updateMonitorChart(content); 
+    if (cmd === 197 && window.onAdvData) window.onAdvData(id, content.slice(1));
+}
+
+// ==================== Motion Editor Logic ====================
+let teachingTimer = null, scanInterval = null;
+const MAX_SCAN_ID = 24; 
+const state = { servos: [], groups: [ { name: "Default Group", frames: [] } ], currentGroupIdx: 0, isPlaying: false };
+let foundServosMap = new Map(); 
+let servoLayout = {}; 
+let isLayoutLocked = false; 
+
+function startIntervalScan() {
+    if (!isConnected) return;
+    const overlay = document.getElementById('scanOverlay'); 
+    overlay.style.display = 'flex';
+    window.isScanning = true; 
+    foundServosMap.clear(); 
+    
+    let currentScanId = 0;
+    let scanRound = 1; 
+
+    scanInterval = setInterval(() => {
+        if (currentScanId > MAX_SCAN_ID) {
+            if (scanRound < 2) {
+                scanRound++;
+                currentScanId = 0;
+                return; 
+            }
+            clearInterval(scanInterval); 
+            scanInterval = null; 
+            window.isScanning = false;
+            
+            state.servos = Array.from(foundServosMap.values()).sort((a,b)=>a.id-b.id);
+            renderServoControls(); 
+            overlay.style.display = 'none'; 
+            log(`Scan finished. Found ${state.servos.length} servos.`, "log-sys"); 
+            return;
+        }
+        document.getElementById('scanText').innerText = `正在扫描 ID ${currentScanId} (轮次 ${scanRound}/2)...`;
+        sendBytesNoWait(buildPacket(0x0A, [currentScanId])); 
+        currentScanId++;
+    }, 50);
+}
+
+async function checkServoHealth() {
+    if (!isConnected) return;
+    const leds = document.querySelectorAll('.led');
+    leds.forEach(l => {
+        l.className = "led checking";
+        l.title = "正在检查...";
+    });
+    for(const s of state.servos) {
+        sendBytesNoWait(buildPacket(0x03, [s.id, 0x05]));
+        await new Promise(r => setTimeout(r, 20)); 
+    }
+}
+
+function updateServoStatusUI(id, s) { 
+    const el = document.getElementById(`led_${id}`); if(!el) return;
+    el.className = "led";
+    let titleText = "状态正常";
+    let isError = false;
+    
+    if (s === 0) {
+        el.classList.add('online');
+    } else {
+        let tips = [];
+        if(s & 0x01) { 
+            el.classList.add('online'); 
+            tips.push("执行中"); 
+        } 
+        if(s & 0x02) { isError=true; tips.push("执行错误"); }
+        if(s & 0x04) { isError=true; tips.push("堵转错误"); }
+        if(s & 0x08) { isError=true; tips.push("电压过高"); }
+        if(s & 0x10) { isError=true; tips.push("电压过低"); }
+        if(s & 0x20) { isError=true; tips.push("电流过大"); }
+        if(s & 0x40) { isError=true; tips.push("功率过大"); }
+        if(s & 0x80) { isError=true; tips.push("温度过高"); }
+        
+        if (isError) {
+            el.className = "led err";
+        } else if (!(s & 0x01) && s!==0) {
+             el.classList.add('online'); 
+        }
+        if (tips.length > 0) titleText = tips.join(", ");
+    }
+    el.title = titleText;
+}
+
+function toggleLayoutLock() {
+    isLayoutLocked = !isLayoutLocked;
+    const btn = document.getElementById('btnLockLayout');
+    const items = document.querySelectorAll('.servo-item');
+    if(isLayoutLocked) {
+        btn.innerText = "🔒 布局: 锁定";
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline');
+        items.forEach(el => el.classList.add('locked-layout'));
+    } else {
+        btn.innerText = "🔓 布局: 解锁";
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline');
+        items.forEach(el => el.classList.remove('locked-layout'));
+    }
+}
+
+function renderServoControls() {
+    const c = document.getElementById('servoContainer'); c.innerHTML = '';
+    if(state.servos.length===0) c.innerHTML='<div style="color:#999; text-align:center; padding:50px;">无在线设备</div>';
+    const CARD_W = 104; const CARD_H = 44; const GAP_Y = 20; const GAP_X = 10; const COLS = 4;
+    state.servos.forEach((s, idx) => {
+        const blinkClass = s.locked ? '' : 'unlocked';
+        const lockText = s.locked ? '🔒' : '🔓';
+        const lockBtnClass = s.locked ? 'btn-success' : 'btn-danger';
+        const lockedLayoutClass = isLayoutLocked ? 'locked-layout' : 'draggable';
+        
+        let top = 0, left = 0;
+        if (servoLayout[s.id]) { top = servoLayout[s.id].y; left = servoLayout[s.id].x; } 
+        else { const row = Math.floor(idx / COLS); const col = idx % COLS; top = 10 + row * (CARD_H + GAP_Y); left = 10 + col * (CARD_W + GAP_X); servoLayout[s.id] = {x: left, y: top}; }
+        
+        const cardHtml = `
+        <div class="servo-item ${blinkClass} ${lockedLayoutClass}" id="servo-card-${s.id}" style="top:${top}px; left:${left}px" onmousedown="dragStartServo(event, ${s.id})">
+            <div class="card-row-top">
+                <div id="led_${s.id}" class="led online" title="状态正常"></div>
+                <span class="servo-id">ID:${s.id}</span>
+                <button id="btnLock_${s.id}" class="btn-mini-lock ${lockBtnClass}" onclick="toggleSingleTorque(${idx}); event.stopPropagation()">${lockText}</button>
+            </div>
+            <div class="card-row-bottom">
+                 <input type="number" id="num_${s.id}" class="compact-num" min="-180" max="180" step="0.1" value="${s.angle}" onchange="onServoInput(${idx},this.value)" onmousedown="event.stopPropagation()">
+                 <input type="range" id="rng_${s.id}" min="-180" max="180" step="0.1" value="${s.angle}" oninput="onServoInput(${idx},this.value)" onmousedown="event.stopPropagation()">
+            </div>
+        </div>`;
+        c.innerHTML += cardHtml;
+    });
+}
+
+let dragTarget = null; let dragOffset = {x:0, y:0};
+window.dragStartServo = (e, id) => { 
+    if(isLayoutLocked) return; 
+    if(e.button !== 0) return; 
+    const card = document.getElementById(`servo-card-${id}`); 
+    if(!card) return; 
+    dragTarget = { el: card, id: id }; 
+    const rect = card.getBoundingClientRect(); 
+    dragOffset.x = e.clientX - rect.left; 
+    dragOffset.y = e.clientY - rect.top; 
+    card.style.zIndex = 100; 
+    document.addEventListener('mousemove', dragMoveServo); 
+    document.addEventListener('mouseup', dragEndServo); 
+};
+function dragMoveServo(e) { if(!dragTarget) return; e.preventDefault(); const container = document.getElementById('servoContainer'); const containerRect = container.getBoundingClientRect(); let newLeft = e.clientX - containerRect.left - dragOffset.x + container.scrollLeft; let newTop = e.clientY - containerRect.top - dragOffset.y + container.scrollTop; if(newLeft < 0) newLeft = 0; if(newTop < 0) newTop = 0; if(newLeft > container.scrollWidth - 100) newLeft = container.scrollWidth - 100; if(newTop > container.scrollHeight - 50) newTop = container.scrollHeight - 50; dragTarget.el.style.left = newLeft + 'px'; dragTarget.el.style.top = newTop + 'px'; }
+function dragEndServo(e) { if(!dragTarget) return; const left = parseInt(dragTarget.el.style.left); const top = parseInt(dragTarget.el.style.top); servoLayout[dragTarget.id] = {x: left, y: top}; dragTarget.el.style.zIndex = ""; dragTarget = null; document.removeEventListener('mousemove', dragMoveServo); document.removeEventListener('mouseup', dragEndServo); }
+
+async function setGlobalOrigin() {
+    if(!isConnected) return alert("请先连接串口");
+    if(state.servos.length === 0) return alert("未扫描到任何设备");
+    if(!confirm(`⚠️ 严重警告：\n是否将【所有在线舵机】的当前位置强制设定为原点(0°)？`)) return;
+    log(`开始执行全局原点设定...`, "log-sys");
+    for (const s of state.servos) {
+        sendBytesNoWait(buildPacket(0x18, [s.id, 0x10, 0, 0])); 
+        await new Promise(r => setTimeout(r, 50));
+        sendBytesNoWait(buildPacket(0x17, [s.id, 0])); 
+        s.angle = 0;
+        const numInput = document.getElementById(`num_${s.id}`);
+        const rangeInput = document.getElementById(`rng_${s.id}`);
+        if(numInput) numInput.value = 0; if(rangeInput) rangeInput.value = 0;
+        await new Promise(r => setTimeout(r, 20));
+    }
+    log(`原点设定完成，500ms后校验...`, "log-sys");
+    setTimeout(() => { readAllAngles(false); log("校验完成.", "log-sys"); }, 500);
+}
+
+// 新增功能：重置所有在线舵机的多圈圈数
+async function resetGlobalMultiTurn() {
+    if(!isConnected) return alert("请先连接串口");
+    if(state.servos.length === 0) return alert("未扫描到任何设备");
+    if(!confirm("是否将[所有在线舵机]重置圈数\n\n注意:1.写入后舵机会自动卸力。")) return;
+    
+    log("开始执行全局重置圈数...", "log-sys");
+    for (const s of state.servos) {
+        sendBytesNoWait(buildPacket(0x18, [s.id, 0x10, 0, 0])); 
+        await new Promise(r => setTimeout(r, 20)); 
+        sendBytesNoWait(buildPacket(0x11, [s.id])); 
+        await new Promise(r => setTimeout(r, 20));
+    }
+    log("全局圈数重置指令已发送。", "log-sys");
+}
+
+window.toggleUnlockParams = () => { const val = document.getElementById('unlockMode').value; document.getElementById('unlockPower').style.display = (val === '0x12') ? 'inline-block' : 'none'; }
+window.toggleSingleTorque = (idx) => { const s = state.servos[idx]; s.locked = !s.locked; let method = 0x11; let pwr = 0; if(!s.locked) { method = parseInt(document.getElementById('unlockMode').value); if(method === 0x12) pwr = parseInt(document.getElementById('unlockPower').value)||0; else method = 0x10; } sendBytesNoWait(buildPacket(0x18, [s.id, method, ...U16(pwr)])); const btn = document.getElementById(`btnLock_${s.id}`); const item = btn.closest('.servo-item'); if(s.locked) { btn.className = 'btn-mini-lock btn-success'; btn.innerText = '🔒'; item.classList.remove('unlocked'); } else { btn.className = 'btn-mini-lock btn-danger'; btn.innerText = '🔓'; item.classList.add('unlocked'); } manageTeachingState(); }
+function setGlobalTorque(enable) { if(!isConnected) return; state.servos.forEach(s => { s.locked = enable; let method = 0x11; let pwr = 0; if(!enable) { method = parseInt(document.getElementById('unlockMode').value); if(method === 0x12) pwr = parseInt(document.getElementById('unlockPower').value)||0; else method = 0x10; } sendBytesNoWait(buildPacket(0x18, [s.id, method, ...U16(pwr)])); }); renderServoControls(); manageTeachingState(); }
+function manageTeachingState() { const anyUnlocked = state.servos.some(s => !s.locked); if(anyUnlocked && !teachingTimer) teachingTimer = setInterval(() => readAllAngles(true), 100); else if(!anyUnlocked && teachingTimer) { clearInterval(teachingTimer); teachingTimer=null; } }
+window.onServoInput = (idx, val) => { 
+    state.servos[idx].angle = parseFloat(val); 
+    document.getElementById(`num_${state.servos[idx].id}`).value = val; 
+    document.getElementById(`rng_${state.servos[idx].id}`).value = val; 
+    if(document.getElementById('chkRealtime').checked) {
+        const speedVal = parseInt(document.getElementById('rtSpeed').value) || 0;
+        sendBytesNoWait(buildPacket(0x08, [state.servos[idx].id, ...S16(angleToRaw(val)), ...U16(speedVal), ...U16(0)]));
+    }
+}
+function updateServoUI(id, angle) { const s = state.servos.find(x => x.id === id); if(s) { s.angle = angle; const num = document.getElementById(`num_${id}`); const rng = document.getElementById(`rng_${id}`); if(num && document.activeElement !== num) num.value = angle; if(rng && document.activeElement !== rng) rng.value = angle; } }
+async function readAllAngles(fast) { if(!isConnected) return; for(const s of state.servos) { if(fast && s.locked) continue; sendBytesNoWait(buildPacket(0x0A, [s.id])); await new Promise(r=>setTimeout(r,fast?2:20)); } }
+
+// === Fixed Sync Move with Safety Buffer ===
+async function syncMove(data, time) { 
+    if (!isConnected || !data.length) return; 
+    const content = [0x08, 7, data.length]; 
+    data.forEach(s => { 
+        content.push(s.id, ...S16(angleToRaw(s.angle)), ...U16(time), ...U16(0)); 
+    }); 
+    sendBytesNoWait(buildPacket(0x19, content)); 
+}
+
+function renderGroupSelect() { const sel = document.getElementById('groupSelect'); sel.innerHTML = ''; state.groups.forEach((g, idx) => { const opt = document.createElement('option'); opt.value = idx; opt.text = g.name + ` (${g.frames.length}帧)`; sel.add(opt); }); sel.value = state.currentGroupIdx; renderList(); }
+function switchGroup(idx) { state.currentGroupIdx = parseInt(idx); renderList(); }
+function createGroup() { const name = prompt("动作组名称:", "New Group"); if (name) { state.groups.push({ name, frames: [] }); state.currentGroupIdx = state.groups.length - 1; renderGroupSelect(); } }
+function renameGroup() { const name = prompt("重命名:", state.groups[state.currentGroupIdx].name); if (name) { state.groups[state.currentGroupIdx].name = name; renderGroupSelect(); } }
+function deleteGroup() { if (state.groups.length <= 1) return alert("至少保留一个组"); if (confirm("确定删除?")) { state.groups.splice(state.currentGroupIdx, 1); state.currentGroupIdx = 0; renderGroupSelect(); } }
+function addFrame() { if (!state.servos.length) return alert("无数据"); state.groups[state.currentGroupIdx].frames.push({ angles: JSON.parse(JSON.stringify(state.servos)), time: parseInt(document.getElementById('defTime').value), delay: parseInt(document.getElementById('defDelay').value) }); renderList(); renderGroupSelect(); }
+window.updateFrameAngle = (frameIdx, servoIdx, val) => { state.groups[state.currentGroupIdx].frames[frameIdx].angles[servoIdx].angle = parseFloat(val); };
+function renderList() { const tbody = document.getElementById('actionListBody'); tbody.innerHTML = ''; state.groups[state.currentGroupIdx].frames.forEach((frame, idx) => { const tags = frame.angles.map((s, sIdx) => `<span class="angle-tag"><b>${s.id}:</b><input type="number" class="angle-input-mini" value="${s.angle}" step="0.1" onchange="updateFrameAngle(${idx}, ${sIdx}, this.value)">°</span>`).join(''); tbody.innerHTML += `<tr id="fr-${idx}" draggable="true" ondragstart="dragStart(event, ${idx})" ondragover="dragOver(event)" ondrop="dragDrop(event, ${idx})"><td><span class="drag-handle">☰</span>${idx+1}</td><td><div class="pose-scroll-view">${tags}</div></td><td><input type="number" value="${frame.time}" style="width:50px" onchange="modFrame(${idx},'time',this.value)"></td><td><input type="number" value="${frame.delay}" style="width:50px" onchange="modFrame(${idx},'delay',this.value)"></td><td><button class="btn-danger" onclick="delFrame(${idx})">×</button> <button class="btn-outline" onclick="goFrame(${idx})">Go</button></td></tr>`; }); }
+let dragSrcIndex = -1;
+window.dragStart = (e, idx) => { dragSrcIndex = idx; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => e.target.classList.add('draggable-source'), 0); };
+window.dragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; document.querySelectorAll('.draggable-over-top, .draggable-over-bottom').forEach(t => t.classList.remove('draggable-over-top', 'draggable-over-bottom')); const tr = e.target.closest('tr'); if(tr && !tr.classList.contains('draggable-source')) { const rect = tr.getBoundingClientRect(); const midY = rect.top + rect.height / 2; if (e.clientY < midY) tr.classList.add('draggable-over-top'); else tr.classList.add('draggable-over-bottom'); } };
+window.dragDrop = (e, targetIdx) => { e.preventDefault(); cleanupDragStyles(); if (dragSrcIndex === -1 || dragSrcIndex === targetIdx) return; const frames = state.groups[state.currentGroupIdx].frames; const item = frames[dragSrcIndex]; frames.splice(dragSrcIndex, 1); let adjustedTargetIdx = targetIdx; if (dragSrcIndex < targetIdx) adjustedTargetIdx--; if (e.target.closest('tr').classList.contains('draggable-over-bottom')) adjustedTargetIdx++; frames.splice(adjustedTargetIdx, 0, item); dragSrcIndex = -1; renderList(); };
+window.dragOverAppend = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; document.getElementById('append-zone').classList.add('draggable-over'); cleanupDragStyles(); };
+window.dragDropAppend = (e) => { e.preventDefault(); cleanupDragStyles(); document.getElementById('append-zone').classList.remove('draggable-over'); if (dragSrcIndex === -1) return; const frames = state.groups[state.currentGroupIdx].frames; const item = frames.splice(dragSrcIndex, 1)[0]; frames.push(item); dragSrcIndex = -1; renderList(); };
+function cleanupDragStyles() { document.querySelectorAll('tr').forEach(tr => tr.classList.remove('draggable-source', 'draggable-over-top', 'draggable-over-bottom')); }
+window.modFrame = (i,k,v) => state.groups[state.currentGroupIdx].frames[i][k] = parseInt(v);
+window.delFrame = i => { state.groups[state.currentGroupIdx].frames.splice(i,1); renderGroupSelect(); };
+window.goFrame = i => { const f = state.groups[state.currentGroupIdx].frames[i]; f.angles.forEach(s => updateServoUI(s.id, s.angle)); const t = parseInt(f.time) || 1000; syncMove(f.angles, t); };
+
+// === ACTION PLAYBACK LOGIC (PRECISION FIX) ===
+async function playAction() {
+    if (state.isPlaying) return;
+    const frames = state.groups[state.currentGroupIdx].frames;
+    if (!frames.length) return alert("空动作组");
+
+    // 1. SAFETY: Stop all polling to prevent collision (Fix for skipped actions)
+    if (teachingTimer) { clearInterval(teachingTimer); teachingTimer = null; }
+    if (monitorTimer) { clearInterval(monitorTimer); monitorTimer = null; }
+    if (diagMonitorTimer) { 
+        clearInterval(diagMonitorTimer); 
+        diagMonitorTimer = null; 
+        document.getElementById('btnDiagMonitor').style.display='inline-block'; 
+        document.getElementById('btnDiagStop').style.display='none'; 
+    }
+
+    state.isPlaying = true;
+    const loop = document.getElementById('btnLoop').innerText.includes("开");
+
+    // 2. High-Precision Drift Correction Timer
+    let startTime = Date.now();
+    let accumulatedTime = 0;
+
+    do {
+        for (let i=0; i<frames.length; i++) {
+            if (!state.isPlaying) break;
+
+            // UI Highlight
+            document.querySelectorAll('tr').forEach(t=>t.classList.remove('active'));
+            const row = document.getElementById(`fr-${i}`);
+            if(row) { row.classList.add('active'); row.scrollIntoView({block:'center', behavior:'smooth'}); }
+
+            const f = frames[i];
+            
+            // Send Command (Now safe from collision)
+            syncMove(f.angles, f.time);
+            
+            // Update UI
+            f.angles.forEach(s => updateServoUI(s.id, s.angle));
+
+            // Timing Calculation
+            const duration = (parseInt(f.time)||1000) + (parseInt(f.delay)||0);
+            accumulatedTime += duration;
+            
+            // Drift Compensation: wait = target - elapsed
+            const elapsed = Date.now() - startTime;
+            let wait = accumulatedTime - elapsed;
+            
+            if (wait < 0) wait = 0; // If late, catch up immediately
+            
+            await new Promise(r => setTimeout(r, wait));
+        }
+        
+        // Reset base time for loop stability
+        startTime = Date.now();
+        accumulatedTime = 0;
+
+    } while(state.isPlaying && loop);
+
+    state.isPlaying = false;
+    document.querySelectorAll('tr').forEach(t=>t.classList.remove('active'));
+}
+
+function toggleLoop(e) { const on = e.target.innerText.includes("关"); e.target.innerText = on ? "🔁 循环: 开" : "🔁 循环: 关"; e.target.classList.toggle('btn-success', on); }
+function exportJson() { 
+    const cleanGroups = state.groups.map(g => ({ name: g.name, frames: g.frames.map(f => ({ angles: f.angles.map(s => ({id: s.id, angle: s.angle})).sort((a,b) => a.id - b.id), time: f.time, delay: f.delay })) }));
+    let json = '{\n  "version": "5.6",\n  "layout": '+JSON.stringify(servoLayout)+',\n  "groups": [\n';
+    for (let i = 0; i < cleanGroups.length; i++) {
+        const g = cleanGroups[i]; json += `    {\n      "name": "${g.name}",\n      "frames": [\n`;
+        for (let j = 0; j < g.frames.length; j++) { json += `        ${JSON.stringify(g.frames[j])}`; if (j < g.frames.length - 1) json += ','; json += '\n'; }
+        json += `      ]\n    }`; if (i < cleanGroups.length - 1) json += ','; json += '\n';
+    }
+    json += `  ]\n}`;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json], {type:'application/json'})); a.download = 'fashionstar_project_v5.6.json'; a.click(); 
+}
+function importJson(e) { const r = new FileReader(); r.onload = evt => { try { const data = JSON.parse(evt.target.result); if (Array.isArray(data)) { state.groups = data; alert("导入旧版数据成功"); } else if (data.groups) { state.groups = data.groups; if(data.layout) servoLayout = data.layout; } else { throw new Error("Invalid Format"); } state.currentGroupIdx=0; renderGroupSelect(); if(isConnected) renderServoControls(); } catch(err) { alert("JSON Error: " + err.message); } }; r.readAsText(e.target.files[0]); }
+
+// ==================== Param Logic ====================
+const basicParamsDef = [ 
+    {id:33,name:"控制回应",type:"u8"}, {id:34,name:"ID",type:"u8"}, 
+    {id:36,name:"波特率",type:"u8"}, 
+    {id:37,name:"堵转保护功能",type:"u8"}, {id:38,name:"堵转功率上限",type:"u16"}, {id:39,name:"低压保护电压",type:"u16"}, 
+    {id:40,name:"高压保护电压",type:"u16"}, 
+    {id:41,name:"温度保护值",type:"u16"}, 
+    {id:42,name:"功率保护值",type:"u16"}, 
+    {id:43,name:"电流保护值",type:"u16"}, 
+    {id:45,name:"功率保护值迟滞百分比",type:"u8"}, 
+    {id:46,name:"上电锁力开关",type:"u8"}, 
+    {id:48,name:"角度限制开关",type:"u8"}, {id:49,name:"上电缓启开关",type:"u8"}, {id:50,name:"上电缓启时间",type:"u16"}, 
+    {id:51,name:"角度上限",type:"s16"}, {id:52,name:"角度下限",type:"s16"}, {id:53,name:"中点偏移",type:"s16"} 
+];
+const advParamsDef = ["Kp","Kd","Ki","PwmBias","HoldKp","HoldKd","HoldPwmBias"];
+let advancedParamsCache = new Uint8Array(25); 
+let hasReadAdv = false;
+
+function initParamPage() {
+    document.getElementById('basicParamsContainer').innerHTML = basicParamsDef.map(p=>{
+        let inputHtml = `<input type="number" id="p_val_${p.id}" oninput="checkDirty(this)">`;
+        if (p.id === 36) {
+             inputHtml = `<select id="p_val_${p.id}" onchange="checkDirty(this)" style="width:100%">
+               <option value="1">0x01 - 9600</option>
+               <option value="2">0x02 - 19200</option>
+               <option value="3">0x03 - 38400</option>
+               <option value="4">0x04 - 57600</option>
+               <option value="5">0x05 - 115200 (默认)</option>
+               <option value="6">0x06 - 250000</option>
+               <option value="7">0x07 - 500000</option>
+               <option value="8">0x08 - 1000000</option>
+           </select>`;
+        } else if (p.id === 45) {
+             inputHtml = `<input type="text" id="p_val_${p.id}" oninput="checkDirty(this)">`;
+        }
+
+        return `<div class="param-row"><span class="param-label">[${p.id}] ${p.name}</span><span class="param-unit">${p.type}</span>${inputHtml}</div>`;
+    }).join('');
+    
+    document.getElementById('advParamsContainer').innerHTML = advParamsDef.map((n,i)=>`<div class="param-row"><span class="param-label">${n}</span><span class="param-unit">u16</span><input type="number" id="adv_val_${i}" oninput="checkDirty(this)"></div>`).join('');
+}
+initParamPage();
+
+function checkDirty(el) {
+    if(el.value != el.defaultValue) el.classList.add('input-changed');
+    else el.classList.remove('input-changed');
+}
+
+async function readBasicParams() { 
+    const id=parseInt(document.getElementById('param_target_id').value); 
+    for(let p of basicParamsDef) { 
+        window.awaitingParamRead={id}; 
+        sendBytesNoWait(buildPacket(0x03,[id,p.id])); 
+        await new Promise(r=>setTimeout(r,40)); 
+    } 
+}
+window.onParamData = (rid, did, c) => { 
+    const def = basicParamsDef.find(d=>d.id===did); if(!def) return; 
+    let v = (def.type==='u8')?c[0] : (def.type==='s16'? (c[0]|(c[1]<<8))&0x8000 ? (c[0]|(c[1]<<8))-0x10000 : (c[0]|(c[1]<<8)) : (c[0]|(c[1]<<8))); 
+    
+    let displayVal = v;
+    if (did === 41) { displayVal = adcToTemp(v); } 
+    else if (did === 45) { displayVal = (v === 0) ? "0-关" : v; }
+
+    const el = document.getElementById(`p_val_${did}`);
+    el.value = displayVal; 
+    el.defaultValue = displayVal; 
+    el.classList.remove('input-changed');
+}
+
+async function saveBasicParams() { 
+    const id=parseInt(document.getElementById('param_target_id').value); 
+    if(!confirm("⚠️ 请确认是否写入新参数？\n\n注意：\n1. 写入后舵机会自动卸力。\n2. 写入完成后请重启舵机以生效。")) return;
+
+    log("Safety: Sending Stop/Free command before writing params...", "log-sys");
+    sendBytesNoWait(buildPacket(0x18, [id, 0x10, 0, 0])); 
+    await new Promise(r=>setTimeout(r,50)); 
+
+    for(let p of basicParamsDef) { 
+        const el = document.getElementById(`p_val_${p.id}`);
+        let val = el.value; 
+        
+        if(val!=="") { 
+            let numVal = parseInt(val);
+            if (p.id === 41) { numVal = tempToAdc(numVal); } 
+            else if (p.id === 45) { if (val === "0-关") numVal = 0; }
+
+            let bs = p.type==='u8'?[numVal&0xFF]:[numVal&0xFF, (numVal>>8)&0xFF]; 
+            sendBytesNoWait(buildPacket(0x04, [id,p.id,...bs])); 
+            el.defaultValue = val;
+            el.classList.remove('input-changed');
+            await new Promise(r=>setTimeout(r,20)); 
+        } 
+    } 
+}
+
+async function readAdvancedParams() { 
+    sendBytesNoWait(buildPacket(197, [parseInt(document.getElementById('param_target_id').value)], true)); 
+}
+window.onAdvData = (id, d) => { 
+    advancedParamsCache.set(d); 
+    hasReadAdv = true;
+    for(let i=0;i<7;i++) {
+        const val = d[i*2]|(d[i*2+1]<<8);
+        const el = document.getElementById(`adv_val_${i}`);
+        el.value = val;
+        el.defaultValue = val;
+        el.classList.remove('input-changed');
+    }
+}
+
+async function writeAdvancedParams() { 
+    if(!hasReadAdv && !confirm("警告：尚未读取参数，直接写入可能导致未显示的参数(如FullDeg)被清零。确定继续？")) return;
+    const id = parseInt(document.getElementById('param_target_id').value);
+    if(!confirm("⚠️ 请确认是否写入进阶参数？\n\n注意：\n1. 写入后舵机会自动卸力。\n2. 写入完成后请重启舵机以生效。")) return;
+
+    log("Safety: Sending Stop/Free command...", "log-sys");
+    sendBytesNoWait(buildPacket(0x18, [id, 0x10, 0, 0])); 
+    await new Promise(r=>setTimeout(r,50));
+
+    for(let i=0;i<7;i++) { 
+        let v=parseInt(document.getElementById(`adv_val_${i}`).value||0); 
+        advancedParamsCache[i*2] = v&0xFF;
+        advancedParamsCache[i*2+1] = (v>>8)&0xFF;
+        document.getElementById(`adv_val_${i}`).classList.remove('input-changed');
+    } 
+    sendBytesNoWait(buildPacket(196, [id, ...advancedParamsCache], true)); 
+}
+
+function exportParamsINI() {
+    let iniContent = "; Fashionstar Servo Parameter Configuration\n";
+    iniContent += `; Date: ${new Date().toLocaleString()}\n\n`;
+    iniContent += "[BasicParams]\n";
+    basicParamsDef.forEach(p => {
+        const el = document.getElementById(`p_val_${p.id}`);
+        if (el) { iniContent += `Param_${p.id}=${el.value} ; ${p.name}\n`; }
+    });
+    iniContent += "\n[AdvancedParams]\n";
+    let hasAdvData = false;
+    advParamsDef.forEach((name, i) => {
+        const el = document.getElementById(`adv_val_${i}`);
+        if (el) {
+            iniContent += `${name}=${el.value}\n`;
+            if(el.value !== "") hasAdvData = true;
+        }
+    });
+    if(!hasAdvData) { alert("提示：进阶参数看似为空，建议先【读取进阶】再导出。"); }
+    const blob = new Blob([iniContent], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    const id = document.getElementById('param_target_id').value;
+    a.download = `servo_id${id}_params.ini`;
+    a.click();
+}
+
+function importParamsINI(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        applyINIParams(e.target.result);
+        input.value = ''; 
+    };
+    reader.readAsText(file);
+}
+
+function applyINIParams(text) {
+    const lines = text.split(/\r?\n/);
+    let currentSection = "";
+    let importCount = 0;
+    let diffCount = 0;
+
+    lines.forEach(line => {
+        line = line.trim();
+        if (!line || line.startsWith(";")) return; 
+        if (line.startsWith("[") && line.endsWith("]")) {
+            currentSection = line.substring(1, line.length - 1);
+            return;
+        }
+        const parts = line.split("=");
+        if (parts.length < 2) return;
+        const key = parts[0].trim();
+        let value = parts[1].split(";")[0].trim();
+
+        if (currentSection === "BasicParams") {
+            if (key.startsWith("Param_")) {
+                const id = key.split("_")[1];
+                const el = document.getElementById(`p_val_${id}`);
+                if (el) {
+                    el.value = value;
+                    checkDirty(el);
+                    if (el.classList.contains('input-changed')) diffCount++;
+                    importCount++;
+                }
+            }
+        } else if (currentSection === "AdvancedParams") {
+            const idx = advParamsDef.indexOf(key);
+            if (idx !== -1) {
+                const el = document.getElementById(`adv_val_${idx}`);
+                if (el) {
+                    el.value = value;
+                    checkDirty(el);
+                    if (el.classList.contains('input-changed')) diffCount++;
+                    importCount++;
+                }
+            }
+        }
+    });
+
+    if (importCount > 0) {
+        alert(`导入成功！\n- 共加载参数: ${importCount} 个\n- 与当前硬件参数差异: ${diffCount} 个\n\n差异项已用黄色高亮显示，请点击【写入修改】以保存到舵机。`);
+    } else {
+        alert("导入失败：未识别到有效的参数配置，请检查文件格式。");
+    }
+}
+
+// ==================== Control Page Logic ====================
+function setCtrlMode(m) {
+    document.querySelectorAll('.ctrl-mode-tab').forEach((t,i) => t.classList.toggle('active', i===m-1));
+    document.getElementById('ctrl-section-single').style.display = m===1?'block':'none';
+    document.getElementById('ctrl-section-sync').style.display = m===2?'block':'none';
+    document.getElementById('ctrl-section-async').style.display = m===3?'block':'none';
+}
+function renderSingleForm() {
+    const mode = document.getElementById('singleModeSelect').value; const c = document.getElementById('singleFormContainer');
+    const row = (lbl, id, val, step=1) => `<div class="ctrl-row"><label>${lbl}</label><input type="number" id="${id}" value="${val}" step="${step}"></div>`;
+    let h = '';
+    if (mode === '0x0B') h += row('角度 (°)', 'sc_ang', 0, 0.1) + row('时间 (ms)', 'sc_int', 100, 10) + row('加速', 'sc_acc', 20, 10) + row('减速', 'sc_dec', 20, 10) + row('功率', 'sc_pwr', 0);
+    else if (mode === '0x0C') h += row('角度 (°)', 'sc_ang', 0, 0.1) + row('速度 (°/s)', 'sc_vel', 300, 10) + row('加速', 'sc_acc', 20, 10) + row('减速', 'sc_dec', 20, 10) + row('功率', 'sc_pwr', 0);
+    else if (mode === '0x0D') h += row('多圈角度 (°)', 'sc_mang', 0, 0.1) + row('时间 (ms)', 'sc_int', 100, 10) + row('功率', 'sc_pwr', 0);
+    else if (mode === '0x0E') h += row('多圈角度 (°)', 'sc_mang', 0, 0.1) + row('时间 (ms)', 'sc_int', 100, 10) + row('加速', 'sc_acc', 20, 10) + row('减速', 'sc_dec', 20, 10) + row('功率', 'sc_pwr', 0);
+    else if (mode === '0x0F') h += row('多圈角度 (°)', 'sc_mang', 0, 0.1) + row('速度 (°/s)', 'sc_vel', 300, 10) + row('加速', 'sc_acc', 20, 10) + row('减速', 'sc_dec', 20, 10) + row('功率', 'sc_pwr', 0);
+    else if (mode === '0x18') {
+        const currentMethod = document.getElementById('sc_method') ? document.getElementById('sc_method').value : '16';
+        const isDamping = currentMethod === '18';
+        h += `<div class="ctrl-row"><label>停止方式</label>
+              <select id="sc_method" onchange="toggleStopPowerInput(this.value)">
+                <option value="16" ${currentMethod=='16'?'selected':''}>0x10 卸力</option>
+                <option value="17" ${currentMethod=='17'?'selected':''}>0x11 锁力</option>
+                <option value="18" ${currentMethod=='18'?'selected':''}>0x12 阻尼</option>
+              </select></div>`;
+        h += `<div class="ctrl-row" id="row_stop_power" style="display:${isDamping?'grid':'none'}"><label>阻尼力度 (Power)</label><input type="number" id="sc_stop_power" value="500"></div>`;
+    }
+    else if (mode === '0x09') h += row('阻尼功率', 'sc_pwr', 500);
+    else if (mode === '0x17') h += `<div class="ctrl-row"><label>操作</label><select id="sc_reset"><option value="0">设为原点</option><option value="1">恢复出厂</option></select></div>`;
+    else if (mode === '0x11') h += `<div class="ctrl-row"><label>操作</label><span style="font-size:12px;color:#666">重设多圈值</span></div>`;
+    c.innerHTML = h;
+}
+window.toggleStopPowerInput = (val) => { const row = document.getElementById('row_stop_power'); if(row) row.style.display = (val === '18') ? 'grid' : 'none'; };
+
+async function sendSingleCommand() {
+    if(!isConnected) return alert("未连接");
+    const id = parseInt(document.getElementById('sc_id').value);
+    const mode = document.getElementById('singleModeSelect').value;
+    const getVal = (id) => parseFloat(document.getElementById(id).value);
+    let pkt = [];
+    
+    if (mode === '0x17' || mode === '0x11') {
+        sendBytesNoWait(buildPacket(0x18, [id, 0x10, 0, 0])); 
+        await new Promise(r => setTimeout(r, 50)); 
+    }
+
+    if (mode === '0x0B') pkt = buildPacket(0x0B, [id, ...S16(angleToRaw(getVal('sc_ang'))), ...U16(getVal('sc_int')), ...U16(getVal('sc_acc')), ...U16(getVal('sc_dec')), ...U16(getVal('sc_pwr'))]);
+    else if (mode === '0x0C') pkt = buildPacket(0x0C, [id, ...S16(angleToRaw(getVal('sc_ang'))), ...U16(getVal('sc_vel')*10), ...U16(getVal('sc_acc')), ...U16(getVal('sc_dec')), ...U16(getVal('sc_pwr'))]);
+    else if (mode === '0x0D') pkt = buildPacket(0x0D, [id, ...S32(angleToRaw(getVal('sc_mang'))), ...U32(getVal('sc_int')), ...U16(getVal('sc_pwr'))]);
+    else if (mode === '0x0E') pkt = buildPacket(0x0E, [id, ...S32(angleToRaw(getVal('sc_mang'))), ...U32(getVal('sc_int')), ...U16(getVal('sc_acc')), ...U16(getVal('sc_dec')), ...U16(getVal('sc_pwr'))]);
+    else if (mode === '0x0F') pkt = buildPacket(0x0F, [id, ...S32(angleToRaw(getVal('sc_mang'))), ...U16(getVal('sc_vel')*10), ...U16(getVal('sc_acc')), ...U16(getVal('sc_dec')), ...U16(getVal('sc_pwr'))]);
+    else if (mode === '0x18') {
+        const method = parseInt(document.getElementById('sc_method').value);
+        const pwr = (method === 18 && document.getElementById('sc_stop_power')) ? parseInt(document.getElementById('sc_stop_power').value) : 0;
+        pkt = buildPacket(0x18, [id, method, ...U16(pwr)]);
+    }
+    else if (mode === '0x09') pkt = buildPacket(0x09, [id, ...U16(getVal('sc_pwr'))]);
+    else if (mode === '0x17') pkt = buildPacket(0x17, [id, parseInt(document.getElementById('sc_reset').value)]);
+    else if (mode === '0x11') pkt = buildPacket(0x11, [id]); 
+
+    sendBytesNoWait(pkt);
+}
+
+let syncItems = [];
+function renderSyncInputRow() {
+    const mode = document.getElementById('syncModeSelect').value; const c = document.getElementById('syncInputRow');
+    let h = `<div style="display:grid; grid-template-columns:50px 1fr 1fr; gap:5px;"><input type="number" id="sync_id" placeholder="ID" min="0" max="24" onchange="validateID(this)">`;
+    if (mode === '0x0B' || mode === '0x0C') h += `<input type="number" id="sync_ang" placeholder="角度" value="0"><input type="number" id="sync_param1" placeholder="${mode==='0x0B'?'时间':'速度'}" value="${mode==='0x0B'?'100':'300'}"></div><div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; margin-top:5px;"><input type="number" id="sync_acc" placeholder="加速" value="20"><input type="number" id="sync_dec" placeholder="减速" value="20"><input type="number" id="sync_pwr" placeholder="功率" value="0"></div>`;
+    else if (mode === '0x0E' || mode === '0x0F') h += `<input type="number" id="sync_ang" placeholder="多圈角度" value="0"><input type="number" id="sync_param1" placeholder="${mode==='0x0E'?'时间':'速度'}" value="${mode==='0x0E'?'100':'300'}"></div><div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; margin-top:5px;"><input type="number" id="sync_acc" placeholder="加速" value="20"><input type="number" id="sync_dec" placeholder="减速" value="20"><input type="number" id="sync_pwr" placeholder="功率" value="0"></div>`;
+    c.innerHTML = h;
+}
+function addSyncItem() {
+    const mode = document.getElementById('syncModeSelect').value;
+    const id = parseInt(document.getElementById('sync_id').value); if(isNaN(id)) return;
+    let item = { id, mode, ang:parseFloat(document.getElementById('sync_ang').value), p1:parseFloat(document.getElementById('sync_param1').value), acc:parseFloat(document.getElementById('sync_acc').value), dec:parseFloat(document.getElementById('sync_dec').value), pwr:parseFloat(document.getElementById('sync_pwr').value) };
+    syncItems.push(item); renderSyncList();
+}
+function renderSyncList() {
+    const l = document.getElementById('syncList');
+    if(syncItems.length===0) return l.innerHTML='<div style="padding:10px; color:#999; text-align:center">列表为空</div>';
+    l.innerHTML = syncItems.map((it, i) => `<div class="sync-item"><span style="font-weight:bold; width:30px;">#${it.id}</span><span>Ang:${it.ang}, P1:${it.p1}</span><button class="btn-danger btn-small" onclick="syncItems.splice(${i},1);renderSyncList()">×</button></div>`).join('');
+}
+function clearSyncList() { syncItems=[]; renderSyncList(); }
+function sendSyncPacket() {
+    if(!isConnected) return alert("未连接"); if(!syncItems.length) return alert("为空");
+    const subCmd = parseInt(syncItems[0].mode); if(syncItems.some(i => parseInt(i.mode) !== subCmd)) return alert("模式不一致");
+    let dataBlocks = [];
+    syncItems.forEach(it => {
+        let blk = [], angRaw = angleToRaw(it.ang);
+        if (subCmd === 0x0B) blk = [it.id, ...S16(angRaw), ...U16(it.p1), ...U16(it.acc), ...U16(it.dec), ...U16(it.pwr)];
+        else if (subCmd === 0x0C) blk = [it.id, ...S16(angRaw), ...U16(it.p1*10), ...U16(it.acc), ...U16(it.dec), ...U16(it.pwr)];
+        else if (subCmd === 0x0E) blk = [it.id, ...S32(angRaw), ...U32(it.p1), ...U16(it.acc), ...U16(it.dec), ...U16(it.pwr)];
+        else if (subCmd === 0x0F) blk = [it.id, ...S32(angRaw), ...U16(it.p1*10), ...U16(it.acc), ...U16(it.dec), ...U16(it.pwr)];
+        dataBlocks.push(...blk);
+    });
+    sendBytesNoWait(buildPacket(0x19, [subCmd, dataBlocks.length/syncItems.length, syncItems.length, ...dataBlocks]));
+}
+function sendAsyncCmd(sub, val) { if(!isConnected) return alert("未连接"); sendBytesNoWait(buildPacket(sub, sub===0x13?[val]:[])); }
+
+// Monitor Logic
+let monitorTimer = null;
+const chartData = { labels: [], datasets: [ {label:'Angle',data:[],borderColor:'#9c27b0',yAxisID:'y',pointRadius:0,pointHoverRadius:6}, {label:'Volt',data:[],borderColor:'#1A73E8',yAxisID:'y',pointRadius:0,pointHoverRadius:6}, {label:'Curr',data:[],borderColor:'#34A853',yAxisID:'y1',pointRadius:0,pointHoverRadius:6}, {label:'Watt',data:[],borderColor:'#FBBC05',yAxisID:'y1',pointRadius:0,pointHoverRadius:6}, {label:'Temp',data:[],borderColor:'#EA4335',yAxisID:'y',pointRadius:0,pointHoverRadius:6} ]};
+const ctx = document.getElementById('monitorChart').getContext('2d');
+window.monitorChart = new Chart(ctx, { 
+    type:'line', data:chartData, 
+    options:{ 
+        responsive:true, maintainAspectRatio:false, animation:false, 
+        interaction: { mode: 'index', intersect: false },
+        scales:{x:{display:false},y:{position:'left'},y1:{position:'right'}},
+        plugins: {
+            zoom: {
+                zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+                pan: { enabled: true, mode: 'x' }
+            },
+            tooltip: { enabled: true }
+        }
+    } 
+});
+document.getElementById('btnStartMonitor').onclick = () => { if(!isConnected) return; if(monitorTimer) return; monitorTimer = setInterval(() => sendBytesNoWait(buildPacket(0x16, [parseInt(document.getElementById('mon_id').value)])), 50); };
+document.getElementById('btnStopMonitor').onclick = () => { if(monitorTimer) clearInterval(monitorTimer); monitorTimer=null; };
+function updateMonitorChart(c) {
+    const id = c[0];
+    const targetId = parseInt(document.getElementById('mon_id').value);
+    if(id !== targetId) return;
+
+    const v = (c[1]|(c[2]<<8))/1000, i=(c[3]|(c[4]<<8))/1000, p=(c[5]|(c[6]<<8))/1000;
+    const adc=(c[7]|(c[8]<<8));
+    const t = adcToTemp(adc);
+    const statusByte = c[9];
+    let ang = 0; if(c.length>=14) { let u32 = (c[10]|(c[11]<<8)|(c[12]<<16)|(c[13]<<24))>>>0; if(u32>0x7FFFFFFF) u32-=0x100000000; ang = parseFloat((u32/10).toFixed(1)); }
+    
+    document.getElementById('val_volt').innerText=v.toFixed(1)+" V"; document.getElementById('val_curr').innerText=i.toFixed(2)+" A";
+    document.getElementById('val_pow').innerText=p.toFixed(1)+" W"; document.getElementById('val_temp').innerText=t+" °C";
+    document.getElementById('val_status').innerText="0x"+statusByte.toString(16).toUpperCase().padStart(2,'0');
+    document.getElementById('val_angle').innerText=ang+"°";
+    
+    if(chartData.labels.length>100) { chartData.labels.shift(); chartData.datasets.forEach(d=>d.data.shift()); }
+    chartData.labels.push(""); 
+    chartData.datasets[0].data.push(ang); chartData.datasets[1].data.push(v); 
+    chartData.datasets[2].data.push(i); chartData.datasets[3].data.push(p); chartData.datasets[4].data.push(t);
+    window.monitorChart.update();
+}
+
+function parseInputData() {
+    let input = document.getElementById('interpretInput').value.trim();
+    if(!input) return;
+    input = input.replace(/TX:|RX:|0x|,|\s/gi, ' '); 
+    const bytes = input.split(' ').filter(x=>x).map(x=>parseInt(x,16));
+    const res = document.getElementById('interpretResult');
+    if(bytes.some(isNaN)) { res.innerHTML = `<span style="color:red">解析失败：格式错误</span>`; return; }
+    
+    let html = '';
+    const row = (lbl, val, raw) => `<div class="packet-part"><span class="packet-label">${lbl}</span><span class="packet-val">${val}</span><span class="packet-raw">Raw: ${raw||''}</span></div>`;
+
+    if(bytes.length < 5) { res.innerHTML = `<span style="color:#d9534f">数据过短</span>`; return; }
+    
+    const h1=bytes[0], h2=bytes[1], cmd=bytes[2], len=bytes[3], cs=bytes[bytes.length-1];
+    const content = bytes.slice(4, 4+len);
+    
+    html += row("协议头", (h1===0x13&&h2===0x4D)?"Protected":"Standard", `${h1.toString(16)} ${h2.toString(16)}`.toUpperCase());
+    html += row("指令 (Cmd)", CMD_NAMES[cmd] || `Unknown (0x${cmd.toString(16)})`, `0x${cmd.toString(16).toUpperCase()}`);
+    html += row("数据长度", len + " Bytes");
+
+    if(content.length > 0) {
+        let details = "";
+        if(content.length>0) {
+             if(cmd !== 0x19) details += `ID: ${content[0]}<br>`; 
+             details += `Raw Content: ` + Array.from(content).map(b=>b.toString(16).toUpperCase()).join(' ');
+        }
+        html += `<div class="packet-part"><span class="packet-label">数据解析</span><div style="font-family:monospace; margin-top:5px; background:#eef; padding:5px; border-radius:4px;">${details}</div></div>`;
+    }
+
+    const calcCs = sum8(bytes.slice(0, bytes.length-1));
+    html += row("校验和", (calcCs===cs)?"✅ 通过 (PASS)":"❌ 失败 (FAIL)", `Exp: ${calcCs.toString(16).toUpperCase()}`);
+
+    res.innerHTML = html;
+}
+
+// === Diagnosis Logic (Updated V1.01 Integration) ===
+window.isDiagnosing = false;
+let diagMonitorTimer = null;
+let diagData = [];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// 初始化数据
+for(let i=0; i<=24; i++) {
+     diagData.push({ 
+         id:i, online:false, updatedInLoop:false, 
+         angle:'-', volt:'-', curr:'-', pow:'-', temp:'-', model:'-', version:'-', status:'-', errs:[]
+     });
+}
+
+function renderDiagTable() {
+    const leftCol = document.getElementById('diag-rows-left');
+    const rightCol = document.getElementById('diag-rows-right');
+    leftCol.innerHTML = ''; rightCol.innerHTML = '';
+    
+    for(let i=0; i<=24; i++) {
+        const d = diagData[i];
+        
+        // 运动控制部分的HTML (包含中文重置按钮)
+        const ctrlHtml = `
+        <div class="row-ctrl-group">
+            <input type="number" id="ctrl_input_${i}" class="row-ctrl-input" placeholder="角度" value="0.0" step="0.1" onkeydown="if(event.key==='Enter') manualGo(${i})">
+            <button class="btn-mini-go" onclick="manualGo(${i})">Go</button>
+            <div style="width:1px; height:12px; background:#ddd; margin:0 2px;"></div>
+            <button class="btn-mini-reset-turn" onclick="confirmResetTurns(${i})" title="重置多圈圈数">重置圈数</button>
+            <button class="btn-mini-reset-zero" onclick="confirmSetZero(${i})" title="重置零点">重置零点</button>
+        </div>`;
+
+        const html = `
+            <div class="diag-val-text">${d.id}</div>
+            <div id="diag_conn_box_${i}">${d.online ? '<span class="diag-status-tag diag-status-ok">在线</span>' : '<span class="diag-status-tag diag-status-offline">.</span>'}</div>
+            <div class="diag-val-text" id="diag_ang_${i}">${d.angle}</div>
+            <div class="diag-val-text" id="diag_vol_${i}">${d.volt}</div>
+            <div class="diag-val-text" id="diag_cur_${i}">${d.curr}</div>
+            <div class="diag-val-text" id="diag_pow_${i}">${d.pow}</div>
+            <div class="diag-val-text" id="diag_tmp_${i}">${d.temp}</div>
+            <div class="diag-val-text" id="diag_mod_${i}">${d.model}</div>
+            <div class="diag-val-text" id="diag_ver_${i}">${d.version}</div>
+            <div id="diag_stat_${i}" style="font-size:9px;">${d.status}</div>
+            <div>${ctrlHtml}</div>
+        `;
+        
+        const row = document.createElement('div');
+        row.className = 'diag-row diag-row-layout ' + (d.online ? '' : 'diag-offline');
+        row.id = `diag_row_el_${i}`;
+        row.innerHTML = html;
+        
+        if (i <= 12) leftCol.appendChild(row);
+        else rightCol.appendChild(row);
+    }
+}
+
+// === ID 修改功能 ===
+async function changeServoID() {
+    if(!isConnected) return alert("请先连接串口");
+    const curIdVal = document.getElementById('id_mod_cur').value;
+    const tgtIdVal = document.getElementById('id_mod_tgt').value;
+    if(curIdVal === "" || tgtIdVal === "") return alert("请输入 原ID 和 新ID");
+    const curId = parseInt(curIdVal);
+    const tgtId = parseInt(tgtIdVal);
+    if(isNaN(curId) || isNaN(tgtId)) return alert("请输入有效数字");
+    if(curId < 0 || curId > 253 || tgtId < 0 || tgtId > 253) return alert("ID范围应为 0-253");
+    
+    const confirmed = confirm(`⚠️ 冲突警告：\n请确认修改后的目标ID号在系统上没有相同的ID号，否则会导致冲突！！！\n\n确定要将 ID:${curId} 修改为 ID:${tgtId} 吗？`);
+    if(!confirmed) return;
+    
+    sendBytesNoWait(buildPacket(0x04, [curId, 34, tgtId]));
+    alert(`修改指令已发送 (ID:${curId} -> ${tgtId})。\n请注意：ID修改通常需要重启舵机才能生效。`);
+}
+
+// === 单机控制功能 ===
+function manualGo(id) {
+    const input = document.getElementById(`ctrl_input_${id}`);
+    const val = parseFloat(input.value) || 0;
+    sendSimpleMove(id, val);
+}
+
+function sendSimpleMove(id, angle) {
+    if(!isConnected) return alert("未连接");
+    const rawAngle = angleToRaw(angle);
+    sendBytesNoWait(buildPacket(0x0D, [id, ...S32(rawAngle), ...U32(0), ...U16(0)]));
+}
+
+async function confirmResetTurns(id) {
+    if(!isConnected) return alert("未连接");
+    if(!confirm(`[ID:${id}] 警告：\n请确认是否重置多圈圈数？\n\n重置后不可恢复原来圈数！`)) return;
+    sendBytesNoWait(buildPacket(0x18, [id, 0x10, 0, 0])); // Stop
+    await sleep(20);
+    sendBytesNoWait(buildPacket(0x11, [id])); // Reset Turns
+    await sleep(200); 
+    startDiagnosis(false); // Refresh
+}
+
+async function confirmSetZero(id) {
+    if(!isConnected) return alert("未连接");
+    if(!confirm(`[ID:${id}] 严重警告：\n请确认是否将【当前位置】设为零点？\n\n重置后不可恢复原来零点位置！`)) return;
+    sendBytesNoWait(buildPacket(0x18, [id, 0x10, 0, 0])); // Stop
+    await sleep(20);
+    sendBytesNoWait(buildPacket(0x17, [id, 0])); // Set Zero
+    await sleep(200); 
+    startDiagnosis(false); // Refresh
+}
+
+// === 诊断核心逻辑 ===
+function markRowOffline(i) {
+    const d = diagData[i];
+    d.online = false;
+    const row = document.getElementById(`diag_row_el_${i}`);
+    if(row) {
+        row.className = 'diag-row diag-row-layout diag-offline';
+        document.getElementById(`diag_conn_box_${i}`).innerHTML = '<span class="diag-status-tag diag-status-offline">.</span>';
+        ['ang','vol','cur','pow','tmp','mod','ver','stat'].forEach(k => {
+             const el = document.getElementById(`diag_${k}_${i}`);
+             if(el) el.innerText = '-';
+        });
+    }
+}
+
+async function startDiagnosis(loop = false) {
+    if(!isConnected) {
+        if(loop) toggleMonitor(); 
+        return alert("请先连接串口");
+    }
+    if(window.isDiagnosing && !loop) return;
+
+    window.isDiagnosing = true;
+    document.getElementById('diagFooter').innerText = loop ? "🔵 实时监控运行中..." : "🔄 正在扫描...";
+
+    for(let i=0; i<=24; i++) {
+        const d = diagData[i];
+        d.updatedInLoop = false; 
+
+        sendBytesNoWait(buildPacket(0x01, [i]));
+        await sleep(10); 
+        sendBytesNoWait(buildPacket(0x16, [i]));
+        await sleep(20); 
+        
+        if (!d.updatedInLoop) markRowOffline(i);
+    }
+    
+    if(!loop) {
+        await sleep(200);
+        window.isDiagnosing = false;
+        document.getElementById('diagFooter').innerText = "✅ 单次扫描完成";
+    }
+}
+
+async function readModelVer() {
+    if(!isConnected) return alert("未连接");
+    document.getElementById('diagFooter').innerText = "正在读取型号与版本...";
+    for(let i=0; i<=24; i++) {
+        const d = diagData[i];
+        if(!d.online) continue; 
+        sendBytesNoWait(buildPacket(0x03, [i, 6])); 
+        await sleep(15);
+        sendBytesNoWait(buildPacket(0x03, [i, 7])); 
+        await sleep(15);
+    }
+    document.getElementById('diagFooter').innerText = "型号版本读取完成";
+}
+
+function toggleMonitor() {
+    const btn = document.getElementById('btnDiagMonitor');
+    const stopBtn = document.getElementById('btnDiagStop');
+    
+    if(diagMonitorTimer) {
+        clearInterval(diagMonitorTimer);
+        diagMonitorTimer = null;
+        btn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+        document.getElementById('diagFooter').innerText = "监控已停止";
+        window.isDiagnosing = false;
+    } else {
+        if(!isConnected) return alert("未连接");
+        btn.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+        diagMonitorTimer = setInterval(() => {
+             startDiagnosis(true);
+        }, 1200); 
+    }
+}
+
+async function setDiagTorque(enable) {
+    if(!isConnected) return alert("未连接");
+    for(let i=0; i<=24; i++) {
+        const d = diagData[i];
+        if(d.online) {
+            const mode = enable ? 0x11 : 0x10;
+            sendBytesNoWait(buildPacket(0x18, [i, mode, 0, 0])); 
+            await sleep(10);
+        }
+    }
+}
+
+window.onDiagPacket = (id, cmd, content) => {
+    if(id < 0 || id > 24) return;
+    const d = diagData[id];
+    d.updatedInLoop = true;
+
+    if(!d.online) {
+        d.online = true;
+        const row = document.getElementById(`diag_row_el_${id}`);
+        if(row) {
+             row.classList.remove('diag-offline');
+             document.getElementById(`diag_conn_box_${id}`).innerHTML = '<span class="diag-status-tag diag-status-ok">在线</span>';
+        }
+    }
+    
+    if(cmd === 0x03 && content.length >= 3) {
+        const paramId = content[1];
+        const val = content[2] | (content[3] << 8); 
+        if(paramId === 6) document.getElementById(`diag_mod_${id}`).innerText = val;
+        else if(paramId === 7) { 
+            const verStr = "V" + ((val >> 8) & 0xFF).toString(16).toUpperCase() + (val & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+            document.getElementById(`diag_ver_${id}`).innerText = verStr;
+        }
+    }
+    
+    if(cmd === 0x16 && content.length >= 10) {
+        const v = (content[1]|(content[2]<<8))/1000;
+        const i_amps = (content[3]|(content[4]<<8))/1000;
+        const p = (content[5]|(content[6]<<8))/1000;
+        const temp = adcToTemp(content[7]|(content[8]<<8));
+        const statusByte = content[9];
+        let ang = 0; 
+        if(content.length>=14) { 
+            let u32 = (content[10]|(content[11]<<8)|(content[12]<<16)|(content[13]<<24))>>>0; 
+            if(u32>0x7FFFFFFF) u32-=0x100000000; 
+            ang = parseFloat((u32/10).toFixed(1)); 
+        }
+        d.angle = ang + "°";
+
+        const errs = [];
+        if(statusByte & 0x04) errs.push("堵转");
+        if(statusByte & 0x08) errs.push("高压");
+        if(statusByte & 0x10) errs.push("低压");
+        if(statusByte & 0x80) errs.push("过温");
+        
+        const hex = "0x" + statusByte.toString(16).toUpperCase().padStart(2,'0');
+        let statusHtml = `<span style="color:#666">${hex}</span>`;
+        if(errs.length > 0) statusHtml = `<span style="color:red; font-weight:bold;">${hex} ${errs[0]}</span>`;
+        else if(statusByte === 0) statusHtml = `<span style="color:green">${hex}</span>`;
+
+        const setTxt = (suffix, val) => { const el=document.getElementById(`diag_${suffix}_${id}`); if(el) el.innerHTML=val; };
+        setTxt('ang', d.angle); setTxt('vol', v.toFixed(1)+"V"); setTxt('cur', i_amps.toFixed(2)+"A");
+        setTxt('pow', p.toFixed(1)+"W"); setTxt('tmp', temp+"°C"); setTxt('stat', statusHtml);
+
+        const row = document.getElementById(`diag_row_el_${id}`);
+        if(row) {
+            if((statusByte & 0xFE) !== 0) row.classList.add('diag-error'); else row.classList.remove('diag-error');
+        }
+    }
+};
+
+// === Event Binding ===
+document.getElementById('btnConnect').onclick = connectSerial;
+document.getElementById('btnDisconnect').onclick = disconnectSerial;
+document.getElementById('btnRescan').onclick = startIntervalScan; 
+document.getElementById('btnReadAll').onclick = () => readAllAngles(false); 
+document.getElementById('btnCheckHealth').onclick = checkServoHealth; 
+document.getElementById('btnTorqueOn').onclick = () => setGlobalTorque(true);
+document.getElementById('btnTorqueOff').onclick = () => setGlobalTorque(false);
+document.getElementById('groupSelect').onchange = (e) => switchGroup(e.target.value);
+document.getElementById('btnAddGroup').onclick = createGroup;
+document.getElementById('btnRenameGroup').onclick = renameGroup;
+document.getElementById('btnDelGroup').onclick = deleteGroup;
+document.getElementById('btnAddFrame').onclick = addFrame;
+document.getElementById('btnExport').onclick = exportJson;
+document.getElementById('btnImport').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = importJson;
+document.getElementById('btnPlay').onclick = playAction;
+document.getElementById('btnStop').onclick = () => { state.isPlaying = false; };
+document.getElementById('btnLoop').onclick = toggleLoop;
+document.getElementById('btnSetGlobalOrigin').onclick = setGlobalOrigin;
+document.getElementById('btnResetMultiTurnGlobal').onclick = resetGlobalMultiTurn;
+
+// === Auto-Disconnect Handler ===
+if ("serial" in navigator) {
+    navigator.serial.addEventListener('disconnect', (event) => {
+        if (port && event.target === port) {
+            log("USB Removed. Disconnecting...", "log-err");
+            disconnectSerial();
+            alert("设备已断开 (USB Removed)");
+        }
+    });
+}
+
+// Init
+renderGroupSelect();
+renderServoControls();
+renderSingleForm();
+renderSyncInputRow();
+</script>
+</body>
+</html>

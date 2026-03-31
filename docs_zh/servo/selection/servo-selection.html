@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>南芯微舵机选型器</title>
+    
+    <!-- 纯离线模式：不引入任何外部 CDN。内置 noUiSlider-lite 以保持原始双柄滑块外观 -->
+    <link rel="stylesheet" href="./vendor/nouislider-lite.css">
+    <script src="./vendor/nouislider-lite.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 若外链不可用，页面仍可工作（CSV 解析 + 滑块均有内置降级）。
+        });
+    </script>
+    
+    <style>
+        :root {
+            --primary: #8641A9;       
+            --primary-hover: #9b5bc2; 
+            --bg-light-gray: #F3F4F6; 
+            --border-gray: #E5E7EB;   
+            --bg-body: #F8FAFC;       
+            --bg-surface: #ffffff;    
+            --text-main: #333333;     
+            --text-muted: #6B7280;    
+            --border-color: #E2E8F0;  
+            --loading-overlay-bg: rgba(255, 255, 255, 0.92);
+            --table-row-hover: #F9FAFB;
+            --sidebar-width: 260px;
+            --header-height: 64px;
+        }
+
+        html[data-theme="slate"] {
+            --bg-light-gray: #202124;
+            --border-gray: #2a2c2f;
+            --bg-body: #181818;
+            --bg-surface: #1e1f20;
+            --text-main: #DDDDDD;
+            --text-muted: #B0B3B8;
+            --border-color: #303236;
+            --loading-overlay-bg: rgba(24, 24, 24, 0.92);
+            --table-row-hover: #25272b;
+        }
+
+        * { box-sizing: border-box; transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; 
+        }
+
+        /* --- Loading --- */
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--loading-overlay-bg); backdrop-filter: blur(4px);
+            z-index: 99999; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .loading-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .spinner {
+            width: 46px; height: 46px; border: 4px solid var(--border-gray);
+            border-top: 4px solid var(--primary); border-radius: 50%;
+            animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- Image Modal --- */
+        .image-modal {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px);
+            z-index: 100000; display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s;
+        }
+        .image-modal.open { opacity: 1; visibility: visible; }
+        .image-modal img {
+            max-width: 90%; max-height: 90vh; border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); object-fit: contain;
+        }
+        .close-modal {
+            position: absolute; top: 20px; right: 30px;
+            font-size: 36px; color: #fff; cursor: pointer;
+        }
+
+        /* --- Toolbar --- */
+        .toolbar {
+            height: var(--header-height); background: var(--bg-surface);
+            padding: 0 24px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03); z-index: 100;
+        }
+        .toolbar h1 { 
+            margin: 0; font-size: 18px; color: var(--primary); 
+            font-weight: 700; display: flex; align-items: center;
+        }
+        .actions { display: flex; gap: 10px; align-items: center; }
+        .search-box {
+            padding: 8px 16px; border: 1px solid var(--border-color); 
+            border-radius: 6px; width: 240px; outline: none;
+            font-size: 13px; color: var(--text-main); background: var(--bg-surface);
+        }
+        .search-box:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(134, 65, 169, 0.15); background: var(--bg-surface);}
+        .btn {
+            padding: 8px 16px; border: 1px solid var(--border-color);
+            background: var(--bg-surface); color: var(--text-main);
+            border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px;
+        }
+        .btn:hover { background: #fafafa; border-color: #ccc; }
+        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 4px rgba(134, 65, 169, 0.2); }
+        .action-hidden { display: none !important; }
+
+        .container { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: var(--sidebar-width); background: var(--bg-surface);
+            border-right: 1px solid var(--border-color); overflow-y: auto;
+            padding: 24px; flex-shrink: 0; z-index: 100;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.02);
+            transition: left 0.3s ease-in-out;
+        }
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+
+        .filter-section { margin-bottom: 25px; }
+        .filter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .filter-header h4 {
+            margin: 0; font-size: 14px; color: var(--primary); font-weight: 700; 
+            border-left: 2.5px solid var(--primary); padding-left: 7px; line-height: 1.2;
+        }
+        .unit-select {
+            padding: 3px 6px; font-size: 11px; border-radius: 4px; 
+            border: 1px solid var(--border-gray); outline: none; background: var(--bg-light-gray);
+            color: var(--text-main); font-weight: 600; cursor: pointer;
+        }
+
+        .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+        .checkbox-group label {
+            display: flex; align-items: center; cursor: pointer; 
+            font-size: 13px; color: var(--text-main); padding: 4px; border-radius: 4px;
+        }
+        .checkbox-group label:hover { background: var(--bg-light-gray); color: var(--primary); }
+        .checkbox-group input { margin-right: 8px; width: 15px; height: 15px; accent-color: var(--primary); }
+
+        /* Slider Styles */
+        .slider-container { padding: 0 8px; margin-top: 5px; }
+        .slider-values { display: flex; justify-content: space-between; margin-top: 15px; font-size: 13px; color: var(--text-main); font-weight: 600; }
+        .noUi-target { background: #E5E7EB !important; border: none !important; height: 4px !important; border-radius: 3px !important; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important; }
+        .noUi-connect { background: var(--primary) !important; }
+        .noUi-handle {
+            border: 2px solid white !important; background: var(--primary) !important;
+            box-shadow: 0 2px 6px rgba(134, 65, 169, 0.4) !important; 
+            width: 16px !important; height: 16px !important; 
+            top: -6px !important; right: -8px !important; border-radius: 50% !important; cursor: grab;
+        }
+        .noUi-handle::before, .noUi-handle::after { display: none !important; }
+
+        /* --- Table Layout & Structure --- */
+        .main-view { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        .table-header-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .table-wrapper {
+            background: var(--bg-surface); border: 1px solid var(--border-color);
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            overflow-x: auto; flex: 1; position: relative;
+        }
+        table { width: 100%; min-width: 1550px; border-collapse: collapse; white-space: nowrap; font-size: 13px; text-align: left; }
+        
+        thead th {
+            position: sticky; top: 0; z-index: 20; background: var(--bg-light-gray);
+            padding: 14px 16px; font-weight: 600; color: var(--text-main);
+            border-bottom: 2px solid var(--border-gray); cursor: pointer; user-select: none;
+        }
+        thead th:hover { background: #E5E7EB; } 
+
+        th .sort-icon { display: inline-block; margin-left: 4px; font-size: 10px; }
+        /* 提高默认提示箭头可见度 */
+        th .sort-icon::before { content: '↕'; opacity: 0.6; color: var(--text-muted); }
+        th.sort-asc .sort-icon::before { content: '▲'; opacity: 1; color: var(--primary); }
+        th.sort-desc .sort-icon::before { content: '▼'; opacity: 1; color: var(--primary); }
+        th[role="button"] { cursor: pointer; user-select: none; }
+
+        /* --- 核心修复：解绑序号，使用专用 Class 控制样式 --- */
+        .col-product { width: 140px; min-width: 140px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; font-weight: 600; text-align: left; }
+        .col-image { width: 130px; min-width: 130px; max-width: 130px; text-align: center; }
+        .col-protocol { width: 110px; min-width: 110px; max-width: 110px; }
+
+        /* PC端：图片在最前(0px), 型号(100px), 协议(260px) */
+        @media screen and (min-width: 901px) {
+            .col-image { position: sticky; left: 0; z-index: 10; background: inherit; }
+            .col-product { position: sticky; left: 130px; z-index: 10; background: inherit; }
+            .col-protocol { position: sticky; left: 270px; z-index: 10; background: inherit; box-shadow: 4px 0 8px -2px rgba(0,0,0,0.06); }
+            
+            thead th.col-image, thead th.col-product, thead th.col-protocol { z-index: 30; }
+            .pc-title-hide { display: none; } /* PC 端隐藏标题文字 */
+        }
+
+        tbody tr { background-color: var(--bg-surface); border-bottom: 1px solid var(--border-color); }
+        tbody tr:hover { background-color: var(--table-row-hover); } 
+        td.col-product, td.col-image, td.col-protocol { background-color: inherit; }
+        th.col-product, th.col-image, th.col-protocol { background-color: var(--bg-light-gray); }
+        
+        td { padding: 12px 14px; color: var(--text-main); vertical-align: middle; }
+
+        .product-img-wrap {
+            width: 80px;
+            height: 60px;
+            margin: 0 auto;
+            overflow: hidden;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            cursor: pointer;
+        }
+        .product-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transform: scale(1.26);
+            transform-origin: center center;
+            transition: transform 0.2s ease;
+            display: block;
+        }
+        .product-img-wrap:hover .product-img {
+            transform: scale(1.34);
+        }
+        .product-link,
+        .product-link:link,
+        .product-link:visited { color: #4B60D1 !important; text-decoration: none; cursor: pointer; font-weight: 600; }
+        .product-link:hover,
+        .product-link:focus { color: var(--primary) !important; text-decoration: underline; text-underline-offset: 2px; }
+        .protocol-badge {
+            padding: 0;
+            border-radius: 0;
+            font-size: 13px;
+            font-weight: 400;
+            display: inline;
+            border: none;
+            background: transparent !important;
+            color: var(--text-main) !important;
+        }
+
+        /* --- 移动端 --- */
+        .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 10000; }
+        .sidebar-close { display: none; }
+        .mobile-filter-btn { display: none; }
+
+        @media screen and (max-width: 900px) {
+            .toolbar { height: auto; flex-direction: column; padding: 12px 16px; gap: 12px; }
+            .toolbar h1 { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+            .mobile-filter-btn { display: block !important; width: 100%; text-align: center; background: #F3F4F6; color: var(--primary); border: 1px solid var(--border-color); font-weight: bold; padding: 10px; font-size: 14px; }
+            .sidebar { position: fixed !important; top: 0; left: -110% !important; height: 100vh; width: 260px !important; z-index: 10001; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+            .sidebar.open { left: 0 !important; box-shadow: 4px 0 24px rgba(0,0,0,0.2); }
+            .sidebar-close { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); font-weight: bold; color: var(--primary); }
+            .mobile-overlay.open { display: block; }
+            
+            /* --- 核心修复：手机端表头垂直吸顶与列冻结 --- */
+            /* 1. 所有表头必须统一吸顶 */
+            thead th { position: sticky !important; top: 0 !important; z-index: 20 !important; }
+            
+            /* 2. 型号列(Product) 数据单元格吸左 */
+            td.col-product { position: sticky !important; left: 0 !important; z-index: 10 !important; width: 120px !important; min-width: 120px !important; max-width: 120px !important; box-shadow: 2px 0 6px -2px rgba(0,0,0,0.1) !important; }
+            
+            /* 3. 型号列(Product) 表头同时吸顶和吸左 (双重锁定) */
+            thead th.col-product { position: sticky !important; top: 0 !important; left: 0 !important; z-index: 30 !important; width: 120px !important; min-width: 120px !important; max-width: 120px !important; box-shadow: 2px 0 6px -2px rgba(0,0,0,0.1) !important; }
+            
+            /* 4. 图片和协议 数据单元格 取消吸附 */
+            td.col-image, td.col-protocol { position: static !important; box-shadow: none !important; z-index: auto !important; }
+            
+            /* 5. 图片和协议 表头保留垂直吸附，取消左侧吸附 */
+            thead th.col-image, thead th.col-protocol { left: auto !important; box-shadow: none !important; z-index: 20 !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText" style="color: var(--primary); font-weight: 600; font-size: 15px;">正在加载数据库...</div>
+        <div id="errorText" style="color: #d32f2f; margin-top:15px; font-size:13px; text-align: center; max-width: 80%; line-height: 1.6;"></div>
+    </div>
+
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <span class="close-modal">&times;</span>
+        <img id="modalImage" src="" alt="放大查看" onclick="event.stopPropagation();">
+    </div>
+
+    <div class="toolbar">
+        <h1>南芯微舵机选型器</h1>
+        <div class="actions">
+            <input type="text" id="searchInput" class="search-box" placeholder="搜索产品型号或协议...">
+            <button class="mobile-filter-btn" onclick="toggleMobileSidebar()">≡ 筛选条件</button>
+            <button class="btn action-hidden" onclick="document.getElementById('fileInput').click()">导入数据</button>
+            <button class="btn action-hidden" onclick="exportToExcel()">导出表格</button>
+            <button class="btn btn-primary action-hidden" onclick="autoFetchCSV()">重载数据库</button>
+        </div>
+        <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" onchange="handleFileImport(this)" style="display: none !important;">
+    </div>
+
+    <div class="container">
+        <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileSidebar()"></div>
+
+        <div class="sidebar" id="sidebarContainer">
+            <div class="sidebar-close">
+                <span>≡ 筛选器</span>
+                <span style="font-size:24px; cursor:pointer;" onclick="toggleMobileSidebar()">×</span>
+            </div>
+
+            <div class="filter-section">
+                <div class="filter-header">
+                    <h4>堵转扭矩</h4>
+                    <select id="unit-torque" class="unit-select" onchange="switchUnit('torque', this.value)">
+                        <option value="nm">N.m</option>
+                        <option value="kgcm" selected>kg-cm</option>
+                    </select>
+                </div>
+                <div class="slider-container">
+                    <div id="slider-torque"></div>
+                    <div class="slider-values">
+                        <span id="torque-start">0</span>
+                        <span id="torque-end">150</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <div class="filter-header">
+                    <h4>空载速度</h4>
+                    <select id="unit-speed" class="unit-select" onchange="switchUnit('speed', this.value)">
+                        <option value="rpm" selected>rpm</option>
+                        <option value="sec">sec/60°</option>
+                    </select>
+                </div>
+                <div class="slider-container">
+                    <div id="slider-speed"></div>
+                    <div class="slider-values">
+                        <span id="speed-start">0</span>
+                        <span id="speed-end">180</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="checkboxesContainer"></div>
+        </div>
+
+        <div class="main-view">
+            <div class="table-header-info">
+                <span id="status-text">就绪</span>
+            </div>
+            
+            <div class="table-wrapper">
+                <table id="servoTable">
+                    <thead>
+                        <tr id="tableHeadRow">
+                            <th class="col-product" onclick="handleSort('product')" data-key="product" role="button" tabindex="0" aria-sort="none">产品型号 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th class="col-image no-sort"><span class="pc-title-hide">预览图</span></th>
+                            <th class="col-protocol" onclick="handleSort('protocol')" data-key="protocol" role="button" tabindex="0" aria-sort="none">通讯协议 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('voltage')" data-key="voltage" role="button" tabindex="0" aria-sort="none">输入电压 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('stall_torque')" data-key="stall_torque" role="button" tabindex="0" aria-sort="none">堵转扭矩(Max) <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('cont_torque')" data-key="cont_torque" role="button" tabindex="0" aria-sort="none">动态扭矩(Max) <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('speed')" data-key="speed" role="button" tabindex="0" aria-sort="none">空载速度 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('motor')" data-key="motor" role="button" tabindex="0" aria-sort="none">电机类型 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('ratio')" data-key="ratio" role="button" tabindex="0" aria-sort="none">减速比 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('gear_material')" data-key="gear_material" role="button" tabindex="0" aria-sort="none">齿轮材质 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('appearance')" data-key="appearance" role="button" tabindex="0" aria-sort="none">外观形状 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('case_material')" data-key="case_material" role="button" tabindex="0" aria-sort="none">外壳材质 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('dims')" data-key="dims" role="button" tabindex="0" aria-sort="none">外形尺寸 <span class="sort-icon" aria-hidden="true"></span></th>
+                            <th onclick="handleSort('weight')" data-key="weight" role="button" tabindex="0" aria-sort="none">重量 <span class="sort-icon" aria-hidden="true"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = [];
+        let filteredData = [];
+        let sortState = { key: null, asc: true };
+        const sliderConfigs = { torque: { nm: { min: 0, max: 15, step: 0.1 }, kgcm: { min: 0, max: 150, step: 1 } }, speed: { rpm: { min: 0, max: 180, step: 1 }, sec: { min: 0, max: 0.5, step: 0.01 } } };
+
+        // 根据当前数据动态调整滑轨最大值（按所选单位分别计算）
+        function recomputeSliderMaxima() {
+            const HARD_TORQUE_MAX_NM = 15;
+            const HARD_TORQUE_MAX_KGCM = 150;
+            const HARD_SPEED_MAX_RPM = 180;
+            const HARD_SPEED_MAX_SEC = 0.5;
+            try {
+                const toNums = (arr) => arr.filter(v => Number.isFinite(v) && v > 0);
+                const getMax = (arr) => arr.length ? Math.max.apply(null, arr) : NaN;
+
+                // 扭矩：取“堵转扭矩”为上限参考
+                const nmVals = toNums((currentData || []).map(it => parseMetric(it.stall_torque, 'torque', 'nm')));
+                const kgVals = toNums((currentData || []).map(it => parseMetric(it.stall_torque, 'torque', 'kgcm')));
+                let nmMax = getMax(nmVals);
+                let kgMax = getMax(kgVals);
+
+                // 速度：取“空载速度”为上限参考
+                const rpmVals = toNums((currentData || []).map(it => parseMetric(it.speed, 'speed', 'rpm')));
+                const secVals = toNums((currentData || []).map(it => parseMetric(it.speed, 'speed', 'sec')));
+                let rpmMax = getMax(rpmVals);
+                let secMax = getMax(secVals);
+
+                // 预留 20% 余量，并做友好取整
+                if (Number.isFinite(nmMax)) {
+                    nmMax = Math.ceil(nmMax * 1.2 * 10) / 10;
+                    sliderConfigs.torque.nm.max = Math.min(HARD_TORQUE_MAX_NM, Math.max(sliderConfigs.torque.nm.max, nmMax));
+                }
+                if (Number.isFinite(kgMax)) {
+                    kgMax = Math.ceil(kgMax * 1.2);
+                    sliderConfigs.torque.kgcm.max = Math.min(HARD_TORQUE_MAX_KGCM, Math.max(sliderConfigs.torque.kgcm.max, kgMax));
+                }
+                if (Number.isFinite(rpmMax)) {
+                    rpmMax = Math.ceil(rpmMax * 1.2);
+                    sliderConfigs.speed.rpm.max = Math.min(HARD_SPEED_MAX_RPM, Math.max(sliderConfigs.speed.rpm.max, rpmMax));
+                }
+                if (Number.isFinite(secMax)) {
+                    secMax = Math.ceil(secMax * 1.2 * 100) / 100;
+                    sliderConfigs.speed.sec.max = Math.min(HARD_SPEED_MAX_SEC, Math.max(sliderConfigs.speed.sec.max, secMax));
+                }
+            } catch (e) {
+                console.warn('recomputeSliderMaxima error:', e);
+            }
+        }
+
+        function applyTheme(scheme) {
+            const normalized = scheme === "slate" ? "slate" : "default";
+            document.documentElement.setAttribute("data-theme", normalized);
+        }
+
+        window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (!data || data.type !== "fs-wiki-theme") return;
+            applyTheme(data.scheme);
+        });
+
+        applyTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "slate" : "default");
+
+        function openImageModal(imgSrc) { if(!imgSrc || imgSrc==='-') return; const modal = document.getElementById('imageModal'); document.getElementById('modalImage').src = imgSrc; modal.classList.add('open'); }
+        function closeImageModal() { const modal = document.getElementById('imageModal'); modal.classList.remove('open'); }
+        function toggleMobileSidebar() { const sidebar = document.getElementById('sidebarContainer'); const overlay = document.getElementById('mobileOverlay'); sidebar.classList.toggle('open'); overlay.classList.toggle('open'); }
+
+        // --- 物理换位逻辑：PC端自动把图片移到第1列 ---
+        function applyPhysicalReorder(row) {
+            if (window.innerWidth > 900) {
+                const cells = Array.from(row.children);
+                if (cells.length >= 2) row.insertBefore(cells[1], cells[0]);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPhysicalReorder(document.getElementById('tableHeadRow'));
+        });
+
+        function formatReductionRatio(ratio) { if (!ratio) return "-"; const str = String(ratio).trim(); const match = str.match(/^(\d+):0?(\d+):00$/); if (match) return `${match[1]}:${match[2]}`; return str; }
+        function extractProductName(fullName) { if (!fullName) return ""; const match = String(fullName).match(/\(([^)]+)\)/); return match ? match[1].trim() : String(fullName); }
+
+        function parseMetric(val, type, unit) {
+            if (!val || val === '-') return NaN; 
+            const str = String(val).toLowerCase();
+            if (type === 'torque') {
+                const matchNm = str.match(/(\d+(\.\d+)?)\s*n[·.]?m/i); const matchKg = str.match(/(\d+(\.\d+)?)\s*kg/i);
+                if (unit === 'nm') { if (matchNm) return parseFloat(matchNm[1]); if (matchKg) return parseFloat(matchKg[1]) / 10.197; } 
+                else if (unit === 'kgcm') { if (matchKg) return parseFloat(matchKg[1]); if (matchNm) return parseFloat(matchNm[1]) * 10.197; }
+            }
+            if (type === 'speed') {
+                const matchSec = str.match(/(\d+(\.\d+)?)\s*sec/i); const matchRpm = str.match(/(\d+(\.\d+)?)\s*rpm/i);
+                if (unit === 'rpm') { if (matchRpm) return parseFloat(matchRpm[1]); if (matchSec) return 10 / parseFloat(matchSec[1]); } 
+                else if (unit === 'sec') { if (matchSec) return parseFloat(matchSec[1]); if (matchRpm) { const rpm = parseFloat(matchRpm[1]); return rpm === 0 ? 0 : 10 / rpm; } }
+            }
+            if (type === 'weight') { const match = str.match(/(\d+(\.\d+)?)/); return match ? parseFloat(match[0]) : NaN; }
+            return NaN;
+        }
+
+const PERF = { t0: performance.now() };
+document.addEventListener('DOMContentLoaded', async () => {
+            if (window.location.protocol === 'file:') {
+                document.querySelectorAll('.action-hidden').forEach(el => el.classList.remove('action-hidden'));
+                initUI();
+                document.getElementById('errorText').innerHTML = `<div style="background:#fff3e0;padding:15px;border-radius:8px;border:1px solid #ffe0b2;text-align:left;"><div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:#e65100;">本地运行检测 (file://)</div><div style="color:#ef6c00;font-size:13px;">受安全限制，请使用右上角“导入数据”手动加载 selection-value.csv。</div><button onclick=\"hideLoading()\" class=\"btn btn-primary\" style=\"margin-top:12px;display:inline-block !important;\">我知道了</button></div>`;
+                return;
+            }
+            await autoFetchCSV();
+        });
+
+        // CSV 解析（RFC4180 简易实现，支持引号与逗号）
+        function parseCSV(text) {
+            const rows = [];
+            let i = 0, field = '', row = [], inQuotes = false;
+            while (i < text.length) {
+                const c = text[i];
+                if (inQuotes) {
+                    if (c === '"') {
+                        if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+                        inQuotes = false; i++; continue;
+                    }
+                    field += c; i++; continue;
+                }
+                if (c === '"') { inQuotes = true; i++; continue; }
+                if (c === ',') { row.push(field); field = ''; i++; continue; }
+                if (c === '\n') { row.push(field); rows.push(row); field = ''; row = []; i++; continue; }
+                if (c === '\r') { i++; continue; }
+                field += c; i++;
+            }
+            if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+            return rows;
+        }
+
+        function csvToJson(text) {
+            const rows = parseCSV(text);
+            if (rows.length === 0) return [];
+            const header = rows[0];
+            const list = [];
+            for (let r = 1; r < rows.length; r++) {
+                const obj = {};
+                for (let c = 0; c < header.length; c++) obj[header[c]] = rows[r][c] ?? '';
+                list.push(obj);
+            }
+            return list;
+        }
+
+async function autoFetchCSV() {
+    showLoading("正在连接数据库...");
+    try {
+        PERF.tFetchStart = performance.now();
+        const response = await fetch('./data/selection-value.csv');
+        if (!response.ok) throw new Error(`HTTP 状态: ${response.status}`);
+        const text = await response.text(); PERF.tFetchEnd = performance.now();
+        const json = csvToJson(text);
+        if (json.length > 0) { processExtractedJSON(json); PERF.tProcessEnd = performance.now(); }
+    } catch (error) {
+        document.getElementById('errorText').innerHTML = `<div style="background:#fef2f2;padding:20px;border-radius:8px;border:1px solid #fecaca;text-align:left;"><div style="font-size:14px;font-weight:bold;margin-bottom:10px;color:#c62828;">数据读取失败</div><div style="color:#b71c1c;font-size:13px;">${error.message}</div><br><div style="color:#475569;font-size:13px;">请检查 ./data/selection-value.csv 文件是否存在且可读。</div><button onclick="hideLoading()" class="btn btn-primary">关闭</button></div>`;
+    } finally { initUI(); }
+}
+
+        // 规格书索引（根据当前仓库生成的静态表），用于将“产品型号”自动绑定到本仓库 docs_zh/servo 下对应规格书
+        const DS_INDEX = {
+            "uart": {"rx8-u26h-m":"../uart/datasheet/rx8-u26h-m/","ha8-u25h-m":"../uart/datasheet/ha8-u25h-m/","ra8-u25-m":"../uart/datasheet/ra8-u25-m/","hp8-u45h-m":"../uart/datasheet/hp8-u45h-m/","rx8-u45h-m":"../uart/datasheet/rx8-u45h-m/","hp8-u45-m":"../uart/datasheet/hp8-u45-m/","rp6-u15h-m":"../uart/datasheet/rp6-u15h-m/","hp6-u15h-m":"../uart/datasheet/hp6-u15h-m/","hx8-u45h-m":"../uart/datasheet/hx8-u45h-m/","rp8-u45h-m":"../uart/datasheet/rp8-u45h-m/","ra8-u25h-m":"../uart/datasheet/ra8-u25h-m/","hx8-u26h-m":"../uart/datasheet/hx8-u26h-m/","rx6-u12h-m":"../uart/datasheet/rx6-u12h-m/","ra8-u35-m":"../uart/datasheet/ra8-u35-m/","rp6-u12h-m":"../uart/datasheet/rp6-u12h-m/","rp8-u45-m":"../uart/datasheet/rp8-u45-m/","hx8-u29h-m":"../uart/datasheet/hx8-u29h-m/","hx8-u51h-m":"../uart/datasheet/hx8-u51h-m/","ha8-u25-m":"../uart/datasheet/ha8-u25-m/","ha8-u35h-m":"../uart/datasheet/ha8-u35h-m/","ra8-u35h-m":"../uart/datasheet/ra8-u35h-m/","rx18-u100h-m":"../uart/datasheet/rx18-u100h-m/","rp6-u18h-m":"../uart/datasheet/rp6-u18h-m/","rx8-u51h-m":"../uart/datasheet/rx8-u51h-m/","rx8-u29h-m":"../uart/datasheet/rx8-u29h-m/","ha8-u35-m":"../uart/datasheet/ha8-u35-m/","hx8-u50h-m":"../uart/datasheet/hx8-u50h-m/","hx8-u28h-m":"../uart/datasheet/hx8-u28h-m/","rx8-u28h-m":"../uart/datasheet/rx8-u28h-m/","rx8-u50h-m":"../uart/datasheet/rx8-u50h-m/","rx18-u101h-m":"../uart/datasheet/rx18-u101h-m/"},
+            "rs485": {"hx8-r50w-m":"../rs485/datasheet/hx8-r50w-m/","hx8-r28w-m":"../rs485/datasheet/hx8-r28w-m/","hx8-r51h-m":"../rs485/datasheet/hx8-r51h-m/","hx8-r29h-m":"../rs485/datasheet/hx8-r29h-m/","hx8-r28h-m":"../rs485/datasheet/hx8-r28h-m/","hx8-r50h-m":"../rs485/datasheet/hx8-r50h-m/","hx8-r29w-m":"../rs485/datasheet/hx8-r29w-m/","hx8-r51w-m":"../rs485/datasheet/hx8-r51w-m/","rx18-r101h-m":"../rs485/datasheet/rx18-r101h-m/","rx18-r100w-m":"../rs485/datasheet/rx18-r100w-m/","rx18-r101w-m":"../rs485/datasheet/rx18-r101w-m/","rx18-r100h-m":"../rs485/datasheet/rx18-r100h-m/"},
+            "canbus": {"hx8-c100w-m":"../canbus/datasheet/hx8-c100w-m/","hx8-c100h-m":"../canbus/datasheet/hx8-c100h-m/"}
+        };
+
+        function normalizeProtocol(p) {
+            const s = String(p || '').toLowerCase();
+            if (s.includes('uart')) return 'uart';
+            if (s.includes('485')) return 'rs485';
+            if (s.includes('can')) return 'canbus';
+            if (s.includes('pwm')) return 'pwm';
+            return '';
+        }
+
+        function isInternalDatasheetLink(href) {
+            if (!href) return false;
+            return /(^\.{2}\/)?.*servo\/(uart|rs485|canbus|pwm)\/datasheet\//.test(href);
+        }
+
+        // 统一“电机类型”显示：
+        //  - Iron Motor / Brushed → 有刷马达
+        //  - Coreless Motor        → 空心杯
+        //  - Brushless Motor       → 无刷马达
+        function mapMotorType(v) {
+            const s = String(v || '').trim();
+            const l = s.toLowerCase();
+            // 已经是中文时保持（但规范同义词）
+            if (/无刷/.test(s)) return '无刷马达';
+            if (/空心杯/.test(s)) return '空心杯';
+            if (/有刷/.test(s)) return '有刷马达';
+            // 英文归一
+            if (l.includes('brushless')) return '无刷马达';
+            if (l.includes('coreless')) return '空心杯';
+            if (l.includes('iron') || l.includes('brushed')) return '有刷马达';
+            return s; // 兜底：保持原值
+        }
+
+        // 电压值规范化：将等价于“24V”的写法（如 24、24v、24 V、24VDC 等）统一显示为“19.2-25.2V”
+        function mapVoltageValue(v) {
+            const s = String(v || '').trim();
+            if (!s) return s;
+            const l = s.toLowerCase().replace(/\s+/g, '').replace(/dc$/, '');
+            if (l === '24v' || l === '24') return '19.2-25.2V';
+            return s;
+        }
+
+        // 齿轮材质映射：Copper→铜，Aluminum/Aluminium→铝合金，Stainless( Steel)→不锈钢
+        function mapGearMaterial(v) {
+            const s = String(v || '').trim();
+            if (!s) return s;
+            if (s === '铜' || s === '铝合金' || s === '不锈钢') return s;
+            const l = s.toLowerCase();
+            if (l.includes('copper')) return '铜';
+            if (l.includes('aluminium') || l.includes('aluminum') || l === 'alu') return '铝合金';
+            if (l.includes('stainless')) return '不锈钢';
+            return s;
+        }
+
+        // 外壳材质映射：All Metal → CNC全金属（含大小写、空格、连字符等变体）
+        function mapCaseMaterial(v) {
+            const s = String(v || '').trim();
+            if (!s) return s;
+            if (s === 'CNC全金属') return s;
+            const norm = s.toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
+            if (norm === 'allmetal' || norm === 'fullmetal') return 'CNC全金属';
+            return s;
+        }
+
+        // 外观形状映射：
+        //  - Dual-Sharft/Shaft → 双轴
+        //  - Single-Sharft/Shaft → 单轴
+        //  - 特定型号（RX6-U12H-M、RP6-U18H-M） → 一体化舵盘
+        function mapAppearance(v, productName) {
+            const s = String(v || '').trim();
+            const p = String(productName || '').trim().toLowerCase();
+            if (p === 'rx6-u12h-m' || p === 'rp6-u18h-m') return '一体化舵盘';
+            const l = s.toLowerCase();
+            if (/dual[-\s]?sha?rf?t/.test(l) || /dual[-\s]?shaft/.test(l)) return '双轴';
+            if (/single[-\s]?sha?rf?t/.test(l) || /single[-\s]?shaft/.test(l)) return '单轴';
+            if (s === '双轴' || s === '单轴' || s === '一体化舵盘') return s;
+            return s;
+        }
+
+        function processExtractedJSON(json) {
+            // 清理常见编码伪影，如 “Â°”“Â·” 等
+            const fixEnc = (v) => {
+                if (typeof v !== 'string') return v;
+                return v
+                    .replace(/Â°/g, '°')
+                    .replace(/Â·/g, '·')
+                    .replace(/\u00A0/g, ' ')
+                    .replace(/Â/g, '');
+            };
+            currentData = json.map((item) => {
+                let linkUrl = item['link'] || item['Link'] || item['LINK'] || item['permalink'] || "";
+                const imgUrls = (item['Images'] || "").split(',').map(s => s.trim()).filter(s => s);
+                const targetImg = imgUrls.length > 1 ? imgUrls[1] : (imgUrls[0] || "");
+                const isWoo = 'Attribute 1 value(s)' in item;
+
+                const productName = fixEnc(isWoo ? extractProductName(item['Name']) : (item['PRODUCT'] || item['Name'] || ""));
+                const protocolName = fixEnc(isWoo ? item['Attribute 1 value(s)'] : (item['PROTOCOL TYPE'] || ""));
+
+                // 若 CSV 未提供内部规格书链接，则按“协议 + 型号”自动指向本仓库 docs_zh/servo 下的规格书
+                if (!isInternalDatasheetLink(linkUrl)) {
+                    const protoKey = normalizeProtocol(protocolName);
+                    const slug = String(productName).trim().toLowerCase();
+                    const candidate = (DS_INDEX[protoKey] || {})[slug];
+                    if (candidate) {
+                        linkUrl = candidate; // 精确指向具体规格书
+                    } else if (protoKey) {
+                        linkUrl = `../${protoKey}/datasheet/`; // 回退到该协议的规格书索引页
+                    }
+                }
+
+                return {
+                    product: productName,
+                    protocol: protocolName,
+                    voltage: mapVoltageValue(fixEnc(isWoo ? item['Attribute 2 value(s)'] : (item['INPUT VOLTAGE'] || ""))),
+                    stall_torque: fixEnc(isWoo ? item['Attribute 20 value(s)'] : (item['MAX STALL TORQUE'] || "")),
+                    cont_torque: fixEnc(isWoo ? item['Attribute 21 value(s)'] : (item['MAX CONTINUOUS TORQUE'] || "")),
+                    speed: fixEnc(isWoo ? item['Attribute 24 value(s)'] : (item['NO LOAD SPEED'] || "")),
+                    motor: mapMotorType(fixEnc(isWoo ? item['Attribute 3 value(s)'] : (item['MOTOR TYPE'] || ""))),
+                    ratio: fixEnc(isWoo ? formatReductionRatio(item['Attribute 10 value(s)']) : (item['REDUCTION RATIO'] || "")),
+                    gear_material: mapGearMaterial(fixEnc(isWoo ? item['Attribute 12 value(s)'] : (item['GEAR MATERIAL'] || ""))),
+                    appearance: mapAppearance(fixEnc(isWoo ? item['Attribute 16 value(s)'] : (item['APPEARANCE'] || "")), productName),
+                    case_material: mapCaseMaterial(fixEnc(isWoo ? item['Attribute 14 value(s)'] : (item['CASE MATERIAL'] || ""))),
+                    dims: fixEnc(isWoo ? item['Attribute 15 value(s)'] : (item['DIMENSIONS'] || "")),
+                    weight: fixEnc(isWoo ? item['Attribute 17 value(s)'] : (item['WEIGHT'] || "")),
+                    link: fixEnc(linkUrl), image: fixEnc(targetImg)
+                };
+            }).filter(item => item.product !== ""); 
+        }
+
+function initUI() { 
+    // 先根据 currentData 动态更新滑轨上限，再初始化控件
+    recomputeSliderMaxima();
+    switchUnit('torque', document.getElementById('unit-torque').value);
+    switchUnit('speed', document.getElementById('unit-speed').value);
+    renderCheckboxes();
+    PERF.tRenderStart = performance.now();
+    applyFilters();
+    PERF.tRenderEnd = performance.now();
+    const s = document.getElementById('status-text');
+    if (s && PERF.tFetchStart) {
+        const fetchMs = Math.round((PERF.tFetchEnd - PERF.tFetchStart) || 0);
+        const parseMs = Math.round((PERF.tProcessEnd - PERF.tFetchEnd) || 0);
+        const renderMs = Math.round((PERF.tRenderEnd - PERF.tRenderStart) || 0);
+        // 去除可视化加载信息，仅保留控制台日志
+        console.log('[Perf]', { fetchMs, parseMs, renderMs });
+    }
+    if (!document.getElementById('errorText').innerHTML) hideLoading();
+}
+
+        function switchUnit(key, unit) {
+            const config = sliderConfigs[key][unit];
+            const sliderDom = document.getElementById(`slider-${key}`);
+            // 优先使用 noUiSlider；否则降级为双 input[type=range]
+            if (typeof noUiSlider !== 'undefined') {
+                if (sliderDom.noUiSlider) sliderDom.noUiSlider.destroy();
+                noUiSlider.create(sliderDom, { start: [config.min, config.max], connect: true, range: { 'min': config.min, 'max': config.max }, step: config.step });
+                // 先立即刷新可视上限/下限文本，避免某些实现中初次不触发 update
+                document.getElementById(`${key}-start`).textContent = config.min;
+                document.getElementById(`${key}-end`).textContent = config.max;
+                // 确保滑轨区间立即生效
+                if (sliderDom.noUiSlider && sliderDom.noUiSlider.set) {
+                    sliderDom.noUiSlider.set([config.min, config.max]);
+                }
+                sliderDom.noUiSlider.on('update', (values) => {
+                    document.getElementById(`${key}-start`).textContent = parseFloat(values[0]);
+                    document.getElementById(`${key}-end`).textContent = parseFloat(values[1]);
+                });
+                sliderDom.noUiSlider.on('change', applyFilters);
+            } else {
+                // Fallback 实现
+                sliderDom.innerHTML = `
+                    <input type="range" id="slider-${key}-min" min="${config.min}" max="${config.max}" step="${config.step}" value="${config.min}" style="width:49%;">
+                    <input type="range" id="slider-${key}-max" min="${config.min}" max="${config.max}" step="${config.step}" value="${config.max}" style="width:49%; float:right;">
+                `;
+                const iMin = document.getElementById(`slider-${key}-min`);
+                const iMax = document.getElementById(`slider-${key}-max`);
+                const sync = () => {
+                    let vMin = parseFloat(iMin.value), vMax = parseFloat(iMax.value);
+                    if (vMin > vMax) { const t = vMin; vMin = vMax; vMax = t; iMin.value = vMin; iMax.value = vMax; }
+                    document.getElementById(`${key}-start`).textContent = vMin;
+                    document.getElementById(`${key}-end`).textContent = vMax;
+                };
+                iMin.oninput = () => { sync(); };
+                iMax.oninput = () => { sync(); };
+                iMin.onchange = applyFilters;
+                iMax.onchange = applyFilters;
+                sync();
+            }
+        }
+
+        function getSliderValues(key) {
+            const sliderDom = document.getElementById(`slider-${key}`);
+            if (sliderDom && sliderDom.noUiSlider) {
+                return sliderDom.noUiSlider.get().map(parseFloat);
+            }
+            const iMin = document.getElementById(`slider-${key}-min`);
+            const iMax = document.getElementById(`slider-${key}-max`);
+            if (iMin && iMax) {
+                const a = parseFloat(iMin.value), b = parseFloat(iMax.value);
+                return [Math.min(a,b), Math.max(a,b)];
+            }
+            return [NaN, NaN];
+        }
+
+        function renderCheckboxes() {
+            const container = document.getElementById('checkboxesContainer'); container.innerHTML = '';
+            
+            const checkboxConfigs = [
+                { key: 'protocol', label: '通讯协议' }, { key: 'voltage', label: '输入电压' },
+                { key: 'motor', label: '电机类型' }, { key: 'appearance', label: '外观形状' },
+                { key: 'gear_material', label: '齿轮材质' }, { key: 'case_material', label: '外壳材质' }
+            ];
+
+            checkboxConfigs.forEach(config => {
+                let uniqueValues = [...new Set(currentData.map(item => item[config.key]))].filter(v => v && v !== '-');
+                
+                if (config.key === 'protocol') {
+                    const order = ['UART', 'RS-485', 'CAN', 'PWM'];
+                    uniqueValues.sort((a, b) => {
+                        let iA = order.findIndex(o => a.toUpperCase().includes(o));
+                        let iB = order.findIndex(o => b.toUpperCase().includes(o));
+                        if(iA === -1) iA = 99; if(iB === -1) iB = 99;
+                        return iA - iB;
+                    });
+                } else if (config.key === 'voltage') {
+                    uniqueValues.sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0));
+                } else if (config.key === 'motor') {
+                    const order = ['无刷马达', '空心杯', '有刷马达'];
+                    uniqueValues.sort((a, b) => {
+                        let iA = order.indexOf(a);
+                        let iB = order.indexOf(b);
+                        if (iA === -1) iA = 99; if (iB === -1) iB = 99;
+                        if (iA !== iB) return iA - iB;
+                        return String(a).localeCompare(String(b));
+                    });
+                } else if (config.key === 'gear_material') {
+                    const order = ['铜', '铝合金', '不锈钢'];
+                    uniqueValues.sort((a, b) => {
+                        let iA = order.indexOf(a);
+                        let iB = order.indexOf(b);
+                        if (iA === -1) iA = 99; if (iB === -1) iB = 99;
+                        if (iA !== iB) return iA - iB;
+                        return String(a).localeCompare(String(b));
+                    });
+                } else {
+                    uniqueValues.sort();
+                }
+                
+                if(uniqueValues.length === 0) return;
+                const section = document.createElement('div'); section.className = 'filter-section';
+                section.innerHTML = `<div class="filter-header"><h4>${config.label}</h4></div>`;
+                const group = document.createElement('div'); group.className = 'checkbox-group';
+                uniqueValues.forEach(val => { group.innerHTML += `<label><input type="checkbox" name="${config.key}" value="${val}" onchange="applyFilters()"> ${val}</label>`; });
+                section.appendChild(group); container.appendChild(section);
+            });
+        }
+
+        function applyFilters() {
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            filteredData = currentData.filter(item => {
+                if (searchVal && !String(item.product).toLowerCase().includes(searchVal)) return false;
+                const checkboxKeys = ['protocol', 'voltage', 'motor', 'appearance', 'gear_material', 'case_material'];
+                for (let key of checkboxKeys) {
+                    const checked = Array.from(document.querySelectorAll(`input[name="${key}"]:checked`)).map(cb => cb.value);
+                    if (checked.length > 0 && !checked.includes(String(item[key]))) return false;
+                }
+                const sliderT = getSliderValues('torque');
+                const tVal = parseMetric(item.stall_torque, 'torque', document.getElementById('unit-torque').value);
+                if (!isNaN(tVal) && (tVal < sliderT[0] || tVal > sliderT[1])) return false;
+                const sliderS = getSliderValues('speed');
+                const sVal = parseMetric(item.speed, 'speed', document.getElementById('unit-speed').value);
+                if (!isNaN(sVal) && (sVal < sliderS[0] || sVal > sliderS[1])) return false;
+                return true;
+            });
+            if(sortState.key) sortDataArray(filteredData, sortState.key, sortState.asc);
+            renderTable(filteredData);
+        }
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        // 表头键盘可达性：Enter/Space 触发排序
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('#servoTable thead th[data-key]').forEach(th => {
+                th.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault(); handleSort(th.getAttribute('data-key'));
+                    }
+                });
+            });
+        });
+
+        function handleSort(key) {
+            if (!key) return;
+            if (sortState.key === key) {
+                if (sortState.asc) {
+                    // 第2次点击：升序 → 降序
+                    sortState.asc = false;
+                } else {
+                    // 第3次点击：降序 → 恢复默认（无排序）
+                    sortState.key = null;
+                    sortState.asc = true; // 复位默认方向
+                    // 清空表头指示
+                    document.querySelectorAll('#servoTable th').forEach(th => {
+                        th.classList.remove('sort-asc', 'sort-desc');
+                        th.setAttribute('aria-sort', 'none');
+                    });
+                    // 重新按原始顺序与当前筛选条件渲染
+                    applyFilters();
+                    return;
+                }
+            } else {
+                // 切换到新列：默认升序
+                sortState.key = key; sortState.asc = true;
+            }
+
+            document.querySelectorAll('#servoTable th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                th.setAttribute('aria-sort', 'none');
+                if (th.getAttribute('data-key') === key) {
+                    th.classList.add(sortState.asc ? 'sort-asc' : 'sort-desc');
+                    th.setAttribute('aria-sort', sortState.asc ? 'ascending' : 'descending');
+                }
+            });
+            sortDataArray(filteredData, sortState.key, sortState.asc);
+            renderTable(filteredData);
+        }
+
+        function sortDataArray(array, key, isAsc) {
+            array.sort((a, b) => {
+                let valA = a[key], valB = b[key];
+                if (['stall_torque', 'cont_torque'].includes(key)) { valA = parseMetric(valA, 'torque', 'nm'); valB = parseMetric(valB, 'torque', 'nm'); }
+                else if (key === 'speed') { valA = parseMetric(valA, 'speed', 'rpm'); valB = parseMetric(valB, 'speed', 'rpm'); }
+                else if (['voltage', 'weight'].includes(key)) { valA = parseFloat(valA) || 0; valB = parseFloat(valB) || 0; }
+                else { valA = String(valA || "").toLowerCase(); valB = String(valB || "").toLowerCase(); }
+                if (valA === valB) return 0;
+                if (valA === undefined || (typeof valA === 'number' && isNaN(valA))) return 1; 
+                if (valB === undefined || (typeof valB === 'number' && isNaN(valB))) return -1;
+                return isAsc ? (valA < valB ? -1 : 1) : (valA < valB ? 1 : -1);
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody'); tbody.innerHTML = '';
+            document.getElementById('status-text').textContent = (data.length > 0)
+                ? `符合条件共 ${data.length} 款产品`
+                : '未找到符合条件的产品';
+            if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:60px;">未找到匹配记录</td></tr>'; return; }
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                const productHtml = item.link ? `<a href="${item.link}" target="_blank" class="product-link">${item.product}</a>` : item.product;
+                const slug = String(item.product || '').trim().toLowerCase();
+                const fallbackWebp = `../../snippets/shop-info/images/${slug}-primary.webp`;
+                const fallbackPng  = `../../snippets/shop-info/images/${slug}-primary.png`;
+                const genericPng   = `../../snippets/shop-info/images/placeholder.png`;
+                const onErrorChain = `if(!this.dataset.alt){this.dataset.alt='w'; this.src='${fallbackWebp}';} else if(this.dataset.alt==='w'){this.dataset.alt='p'; this.src='${fallbackPng}';} else {this.onerror=null; this.src='${genericPng}';}`;
+                // 仅使用本地图片：若 CSV 提供的是本地路径则使用；否则一律使用本地回退链（webp→png→占位）
+                const isLocalPath = typeof item.image === 'string' && item.image.startsWith('../../snippets/');
+                const initialSrc = isLocalPath ? item.image : fallbackWebp;
+                const imgHtml = `<div class="product-img-wrap" onclick="openImageModal(this.querySelector('img').src)"><img src="${initialSrc}" class="product-img" loading="lazy" onerror="${onErrorChain}"></div>`;
+                
+                tr.innerHTML = `
+                    <td class="col-product" title="${item.product}">${productHtml}</td>
+                    <td class="col-image">${imgHtml}</td>
+                    <td class="col-protocol"><span class="protocol-badge">${item.protocol}</span></td>
+                    <td>${item.voltage}</td>
+                    <td>${item.stall_torque}</td> 
+                    <td>${item.cont_torque}</td>
+                    <td>${item.speed}</td>
+                    <td>${item.motor}</td>
+                    <td>${item.ratio}</td>
+                    <td>${item.gear_material}</td>
+                    <td>${item.appearance}</td>
+                    <td>${item.case_material}</td>
+                    <td>${item.dims}</td>
+                    <td>${item.weight}</td>
+                `;
+                applyPhysicalReorder(tr); // 每生成一行，如果是PC端，自动将图片调至最左
+                tbody.appendChild(tr);
+            });
+        }
+
+        function showLoading(text) { const overlay = document.getElementById('loadingOverlay'); document.getElementById('loadingText').textContent = text; overlay.classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+
+        function exportToExcel() {
+            const exportData = filteredData.map(item => ({ '产品型号': item.product, '通讯协议': item.protocol, '输入电压': item.voltage, '堵转扭矩(Max)': item.stall_torque, '动态扭矩(Max)': item.cont_torque, '空载速度': item.speed, '电机类型': item.motor, '减速比': item.ratio, '齿轮材质': item.gear_material, '外观形状': item.appearance, '外壳材质': item.case_material, '外形尺寸': item.dims, '重量': item.weight, '链接': item.link }));
+            if (typeof XLSX !== 'undefined') {
+                const ws = XLSX.utils.json_to_sheet(exportData); const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "舵机列表"); XLSX.writeFile(wb, "Fashionstar_舵机选型表.xlsx");
+            } else {
+                // 降级为 CSV 导出
+                const headers = Object.keys(exportData[0] || {});
+                const csv = [headers.join(',')].concat(exportData.map(row => headers.map(h => {
+                    const v = (row[h] ?? '').toString();
+                    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+                }).join(','))).join('\n');
+                const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Fashionstar_舵机选型表.csv'; a.click(); URL.revokeObjectURL(a.href);
+            }
+        }
+
+        function handleFileImport(input) {
+            const file = input.files[0]; if (!file) return;
+            if (!/\.csv$/i.test(file.name)) { alert('仅支持导入 CSV 文件'); return; }
+            showLoading("正在解析 CSV...");
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const text = e.target.result;
+                    const json = csvToJson(text);
+                    if (json.length > 0) { processExtractedJSON(json); initUI(); }
+                    hideLoading();
+                } catch (err) {
+                    document.getElementById('errorText').innerHTML = `<div style="background:#fef2f2;padding:20px;border-radius:8px;border:1px solid #fecaca;text-align:left;"><div style="font-size:14px;font-weight:bold;margin-bottom:10px;color:#c62828;">解析失败</div><div style="color:#b71c1c;font-size:13px;">${err.message}</div></div>`;
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        // 图片默认显示，无需切换或懒加载
+    </script>
+</body>
+</html>
