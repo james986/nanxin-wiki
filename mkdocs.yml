@@ -91,7 +91,7 @@ plugins:
 # 中文的导航目录
 nav:
   - 首页: index.md
-  - 舵机系列:
+  - 功率MOS管:
     - servo/index.md
     - 选型表: servo/selection/index.md
     - UART 总线舵机:
@@ -197,7 +197,7 @@ nav:
         - RP8-A46: servo/pwm/datasheet/rp8-a46.md
       - 图纸与模型下载:
         - servo/pwm/cad-files/index.md  
-  - 机械手臂:
+  - 时钟芯片:
     - robotic-arm/index.md
     - StarAI Arm:
       - 产品规格书:
@@ -242,7 +242,7 @@ nav:
         - 用户手册: robotic-arm/piper-mate/resources/user-manual.md
         - 开源资料: robotic-arm/piper-mate/resources/open-resource.md
         - 常见问题与解答: robotic-arm/piper-mate/resources/faq.md
-  - 双足机器人:
+  - IGBT:
     - humanoid/index.md
     - Atom-S（10自由度）:
       - 产品规格书: humanoid/atom-s/datasheet-atom-s.md
@@ -256,7 +256,7 @@ nav:
       - 接入其他开源平台: humanoid/atom-x/open-resource-atom-x.md
       - 图纸与模型下载: humanoid/atom-x/cad-files-atom-x.md
       - 常见问题与解答: humanoid/atom-x/faq.md  
-  - 舵机云台:
+  - SIC 单管:
     - gimbal/index.md
     - 物料清单: gimbal/list.md
     - 开发环境配置: gimbal/environmental-configuration.md
@@ -267,7 +267,7 @@ nav:
     - 舵机角度控制: gimbal/servo-angle-control.md
     - 舵机阻尼模式: gimbal/servo-damping-mode.md
     - 舵机用户自定义数据: gimbal/user-defined.md
-  - PLC 工业应用:
+  - SIC 模块:
     - industrial/index.md
     - 西门子 TIA Portal v19（S7-1200）: industrial/plc/sinamics-tia-portal-v19.md
     - 西门子 STEP 7-MicroWIN SMART（S7-200 SMART）: industrial/plc/step7-microwin-smart.md
