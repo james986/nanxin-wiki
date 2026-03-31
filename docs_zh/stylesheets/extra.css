@@ -15,7 +15,7 @@ Nanxinwei Wiki - V47.9
 /* 1. Core Variables - 中央调度站 */
 :root {
   /* 品牌色 */
-  --fs-accent: #0B488D;
+  --fs-accent: #007ACC;
   --fs-divider: rgba(0,0,0,0.15); 
   --fs-table-header-bg: #F8F9FA; 
 
@@ -33,7 +33,7 @@ Nanxinwei Wiki - V47.9
   /* 正文超链接（参考维基百科浅色方案） */
   --fs-link-unvisited: #4B5FD1;
   --fs-link-visited: #4B5FD1;
-  --fs-link-hover: #0B488D;
+  --fs-link-hover: #007ACC;
   --fs-link-active: #5D2F79;
 
   /* Material Design 3 基础色彩覆盖 */

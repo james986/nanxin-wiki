@@ -1,6 +1,6 @@
 /* Minimal noUiSlider-like styles for offline use */
 .noui { position: relative; height: 4px; background: #E5E7EB; border-radius: 3px; }
-.noui .noui-connect { position: absolute; height: 100%; background: #0B488D; border-radius: 3px; }
-.noui .noui-handle { position: absolute; top: -6px; width: 16px; height: 16px; border-radius: 50%; background: #0B488D; box-shadow: 0 2px 6px rgba(11,72,141,0.4); cursor: grab; }
+.noui .noui-connect { position: absolute; height: 100%; background: #007ACC; border-radius: 3px; }
+.noui .noui-handle { position: absolute; top: -6px; width: 16px; height: 16px; border-radius: 50%; background: #007ACC; box-shadow: 0 2px 6px rgba(0,122,204,0.4); cursor: grab; }
 .noui .noui-handle:active { cursor: grabbing; }
 .noui input[type=range] { position: absolute; left: 0; top: -6px; width: 100%; height: 16px; opacity: 0; pointer-events: none; }

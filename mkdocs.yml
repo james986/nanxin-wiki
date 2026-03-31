@@ -11,11 +11,11 @@ theme:
   name: material
   language: zh
   custom_dir: overrides 
-  favicon: assets/favicon.png
+  favicon: assets/nanxin-favicon.svg
   font:
     text: false
     code: false
-  logo: assets/favicon.png
+  logo: assets/nanxin-logo.svg
   features:
     - navigation.path
     - navigation.indexes
