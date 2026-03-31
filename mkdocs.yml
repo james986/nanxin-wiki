@@ -98,7 +98,7 @@ nav:
       - 产品规格书: 
         - servo/uart/datasheet/index.md
         - current-only: servo/uart/datasheet/current-only.md
-        - RX6-U12H-M: servo/uart/datasheet/rx6-u12h-m.md
+        - RX6-U13H-M: servo/uart/datasheet/rx6-u12h-m.md
         - HX8-U26H-M: servo/uart/datasheet/hx8-u26h-m.md
         - RX8-U26H-M: servo/uart/datasheet/rx8-u26h-m.md
         - HX8-U28H-M: servo/uart/datasheet/hx8-u28h-m.md
