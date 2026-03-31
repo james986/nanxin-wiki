@@ -117,10 +117,37 @@ body,
 }
 
 /* 2. Component Cleanup */
-.md-logo, [class*="md-logo"], .md-header__button.md-logo { display: none !important; }
 .md-header__source, .md-nav__source, [data-md-component="source"] { display: none !important; }
 .md-header__title { margin-left: 0 !important; }
-.md-header__ellipsis { padding-left: 0.5rem !important; }
+.md-header__ellipsis { padding-left: 0 !important; }
+
+/* 启用并放大 header logo；favicon 仍由 mkdocs.yml 单独控制 */
+.md-header__button.md-logo {
+  display: inline-flex !important;
+  align-items: center;
+  padding: 0.1rem 0.2rem 0.1rem 0 !important;
+  margin-right: 0.2rem !important;
+}
+
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  display: block;
+  width: auto;
+  height: 2rem !important;
+  max-width: none !important;
+}
+
+@media screen and (min-width: 60em) {
+  .md-header__button.md-logo img,
+  .md-header__button.md-logo svg {
+    height: 2.3rem !important;
+  }
+}
+
+/* logo 已包含品牌字样，隐藏 header 默认站点标题，避免重复 */
+.md-header__title .md-header__topic:first-child {
+  display: none !important;
+}
 
 /* 隐藏页脚导航 */
 .md-footer-nav, .md-footer__nav,
