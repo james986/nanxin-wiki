@@ -78,7 +78,9 @@ def define_env(env):
 <div style="--pdf-size:{size_css}; display: flex; align-items: center; gap: 16px; margin: -16px 0 12px;">
   <div style="flex: 1; height: 1px; background-color: var(--md-default-fg-color--lighter); opacity: 0.5; transform: scaleY(0.5); transform-origin: center;"></div>
   <a href="{safe_href}" download{title_attr} style="display: inline-flex; align-items: center; justify-content: center; width: var(--pdf-size); height: var(--pdf-size); padding: 0; background: transparent; border: 0; box-shadow: none; text-decoration: none; outline: none;">
-    <img src="/assets/icons/pdf.svg" alt="PDF" style="width: 100%; height: 100%; display: block; border: none !important; box-shadow: none !important; outline: none !important; background: transparent !important; border-radius: 0 !important; cursor: pointer !important; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 10px rgba(0,0,0,.12)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none';">
+    <svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PDF" viewBox="0 -960 960 960" fill="#007CC3" style="width: 88%; height: 88%; display: block; border: none !important; box-shadow: none !important; outline: none !important; background: transparent !important; border-radius: 0 !important; cursor: pointer !important; transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 10px rgba(0,0,0,.12)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none';">
+      <path d="M360-460h40v-80h40q17 0 28.5-11.5T480-580v-40q0-17-11.5-28.5T440-660h-80v200Zm40-120v-40h40v40h-40Zm120 120h80q17 0 28.5-11.5T640-500v-120q0-17-11.5-28.5T600-660h-80v200Zm40-40v-120h40v120h-40Zm120 40h40v-80h40v-40h-40v-40h40v-40h-80v200ZM320-240q-33 0-56.5-23.5T240-320v-480q0-33 23.5-56.5T320-880h480q33 0 56.5 23.5T880-800v480q0 33-23.5 56.5T800-240H320Zm0-80h480v-480H320v480ZM160-80q-33 0-56.5-23.5T80-160v-560h80v560h560v80H160Zm160-720v480-480Z"/>
+    </svg>
   </a>
 </div>
 '''
