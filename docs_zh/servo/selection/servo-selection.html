@@ -139,7 +139,7 @@
             border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
             overflow-x: auto; flex: 1; position: relative;
         }
-        table { width: 100%; min-width: 1500px; border-collapse: collapse; white-space: nowrap; font-size: 13px; text-align: left; }
+        table { width: 100%; min-width: 1280px; border-collapse: collapse; white-space: nowrap; font-size: 13px; text-align: left; }
         thead th {
             position: sticky; top: 0; z-index: 20; background: var(--bg-light-gray);
             padding: 14px 16px; font-weight: 600; color: var(--text-main);
@@ -264,8 +264,6 @@
                             <th onclick="handleSort('rds_on_10v')" data-key="rds_on_10v" role="button" tabindex="0" aria-sort="none">RDS(on)<br>10V mΩ MAX. <span class="sort-icon" aria-hidden="true"></span></th>
                             <th onclick="handleSort('rds_on_4_5v')" data-key="rds_on_4_5v" role="button" tabindex="0" aria-sort="none">RDS(on)<br>4.5V mΩ MAX. <span class="sort-icon" aria-hidden="true"></span></th>
                             <th class="col-link no-sort">Datasheet</th>
-                            <th class="col-link no-sort">Package</th>
-                            <th class="col-link no-sort">Tape & Reel</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody"></tbody>
@@ -650,7 +648,7 @@
                 ? `符合条件共 ${data.length} 款 MOSFET`
                 : '未找到符合条件的产品';
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:60px;">未找到匹配记录</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:60px;">未找到匹配记录</td></tr>';
                 return;
             }
             data.forEach(item => {
@@ -668,8 +666,6 @@
                     <td>${displayCell(item.rds_on_10v)}</td>
                     <td>${displayCell(item.rds_on_4_5v)}</td>
                     <td class="col-link">${renderActionLink('Datasheet', item.datasheet_url)}</td>
-                    <td class="col-link">${renderActionLink('Package', item.package_url)}</td>
-                    <td class="col-link">${renderActionLink('Tape & Reel', item.tape_reel_url)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -704,9 +700,7 @@
                 'RDS(on) 10V mΩ MAX.': item.rds_on_10v,
                 'RDS(on) 4.5V mΩ MAX.': item.rds_on_4_5v,
                 '产品链接': item.product_url,
-                'Datasheet': item.datasheet_url,
-                'Package Link': item.package_url,
-                'Tape & Reel': item.tape_reel_url
+                'Datasheet': item.datasheet_url
             }));
             const headers = Object.keys(exportData[0] || {});
             const csv = [headers.join(',')].concat(exportData.map(row => headers.map(h => csvCell(row[h])).join(','))).join('\n');
