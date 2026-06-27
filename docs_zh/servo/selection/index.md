@@ -2,7 +2,7 @@
   <iframe
     id="fs-selection-iframe"
     src="./servo-selection.html"
-    title="舵机选型器"
+    title="MOSFET 选型器"
     loading="lazy"
   ></iframe>
 </div>

@@ -20,6 +20,14 @@
     const api={
       get:()=>[v0.toFixed(2), v1.toFixed(2)],
       on:(evt,fn)=>{ listeners[evt].push(fn); },
+      set:(values)=>{
+        if(!Array.isArray(values) || values.length<2) return;
+        v0=clamp(parseFloat(values[0]));
+        v1=clamp(parseFloat(values[1]));
+        if(v0>v1){ const t=v0; v0=v1; v1=t; }
+        layout();
+        emit('update');
+      },
       destroy:()=>{ window.removeEventListener('resize', layout); },
     };
     el.noUiSlider=api; return api;
